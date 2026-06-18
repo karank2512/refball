@@ -123,6 +123,13 @@ python -m refball.models.robustness --full        # auto-detects no-odds
 python -m refball.data.l2m                         # downloads the MIT-licensed mirror, builds the table
 python -m refball.models.l2m_model                 # crew clutch-error model + placebo
 
+# Additional evidence streams
+python -m refball.models.within_series --quick     # identification: teams held fixed within a series
+python -m refball.data.pull --season-type "Regular Season" --season-start 2017 --season-end 2023
+python -m refball.models.regular_season --quick    # POWER: ~290 games/ref + playoff-vs-baseline
+python -m refball.data.pbp                          # play-by-play foul types + game state (PlayByPlayV3)
+python -m refball.models.pbp_clean --quick          # foul->points on discretionary/competitive fouls
+
 #   --- WITH betting lines (you supply a CSV; see "Odds CSV format" below) ---
 # python -m refball.features.build_table --odds path/to/odds.csv
 # python -m refball.models.fit_stage1               # uses the line as a control
@@ -231,6 +238,27 @@ adversarial self-audit (see `docs/` and the Diagnostics page):
   error-lean (placebo-confirmed), and only a faint, **inconclusive** leaguewide home tilt
   (errors favor home ~1.18×, 94% HDI on the bias includes 0, P≈0.88). Caveats: crew-level (not
   individual), close-late games only (selection), and the NBA grades its own calls.
+
+### Additional evidence streams (all agree)
+
+To attack the power and identification gaps, four more public-data angles — and they converge:
+
+- **Regular-season power test (the strongest result).** Estimating leans across **8,289
+  regular-season games (median ~293 games/referee, 102 refs)** — i.e. with real power — the
+  lean variance *shrinks further* (`sigma ≈ 0.005`), **0 of 102** refs have an interval
+  excluding zero, a referee's playoff lean is **uncorrelated** with their high-power
+  regular-season lean (Spearman ≈ 0.04 → playoff leans are sampling **noise**), and **0 of
+  102** behave differently in the playoffs than their own baseline. This turns the
+  *underpowered* null into a *high-power* null.
+- **Within-series identification.** Holding the matchup fixed (series × team effects; teams
+  identical across a 4–7 game series, crews rotate), the lean stays at placebo level and 0/58
+  refs are distinguishable — the "refs just draw certain matchups" confound isn't hiding a swing.
+- **Play-by-play cleaning.** Rebuilding the foul margin from *discretionary* fouls in
+  *competitive* game states nudges the foul→points coefficient toward the expected sign
+  (γ ≈ −0.14 vs raw +0.03) but it stays **inconclusive** — fouls barely move the scoreboard
+  even after removing garbage-time/intentional fouls.
+- **Closing-line market control.** Adding the real closing spread/total (332 games) barely
+  moves the foul→points coefficient and leaves referee rankings stable (Spearman ≈ 0.76).
 
 ## Main limitations
 

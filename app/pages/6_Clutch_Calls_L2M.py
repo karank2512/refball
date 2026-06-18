@@ -35,17 +35,29 @@ disadvantaged — so an error that hurt the away team is an error that **favored
 )
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Close games covered", f"{summary['n_games']}", help="of 585 playoff games — only close-and-late games get an L2M report")
+c1.metric(
+    "Close games covered",
+    f"{summary['n_games']}",
+    help="of 585 playoff games — only close-and-late games get an L2M report",
+)
 c2.metric("Graded clutch errors", f"{summary['total_errors']}")
-c3.metric("Errors favoring home", f"{summary['err_against_away']}", help="errors that hurt the away team")
-c4.metric("Errors favoring away", f"{summary['err_against_home']}", help="errors that hurt the home team")
+c3.metric(
+    "Errors favoring home", f"{summary['err_against_away']}", help="errors that hurt the away team"
+)
+c4.metric(
+    "Errors favoring away", f"{summary['err_against_home']}", help="errors that hurt the home team"
+)
 
 st.markdown("### Is there an overall clutch home-error bias?")
 lo, hi = summary["home_error_bias_hdi"]
 b = summary["home_error_bias_mean"]
 p = summary["p_bias_favors_home"]
 rr = summary["favor_home_to_away_rate_ratio"]
-verdict = "directionally home-leaning but **not conclusive**" if (lo < 0 < hi) else "**distinguishable from zero**"
+verdict = (
+    "directionally home-leaning but **not conclusive**"
+    if (lo < 0 < hi)
+    else "**distinguishable from zero**"
+)
 st.info(
     f"Overall bias `b = {b:+.3f}` (log), 94% HDI `[{lo:+.3f}, {hi:+.3f}]`, "
     f"**P(favors home) = {p:.2f}**, favor-home : favor-away error-rate ratio **{rr:.2f}×**. "
@@ -75,7 +87,17 @@ if len(eff):
         width="stretch",
     )
     st.dataframe(
-        eff[["referee", "games", "error_lean_mean", "hdi_low", "hdi_high", "p_favor_home", "excludes_zero"]],
+        eff[
+            [
+                "referee",
+                "games",
+                "error_lean_mean",
+                "hdi_low",
+                "hdi_high",
+                "p_favor_home",
+                "excludes_zero",
+            ]
+        ],
         width="stretch",
         height=360,
     )

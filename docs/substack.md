@@ -125,10 +125,21 @@ so plainly.
 method has the power to find a real effect. So I *inject* a known lean into the most-sampled
 official's games and check whether the model recovers it. In my run, a clearly swing-relevant
 **+1 foul/game** lean injected into a referee with ~100 games was **[insert: detected / not
-detected]**; only a **+2 foul/game** lean was reliably recovered. That means the honest
+detected]**; only a **+2 foul/game** lean was reliably recovered. That means the playoff
 headline is **"no *detectable* referee swing,"** not "referees don't matter." With a few
 hundred playoff games and ~20 per official, this design would miss a modest-but-real effect —
 and saying so is the difference between an honest null and an overclaim.
+
+**So I went and got the power.** I pulled ~8,300 regular-season games (median ~290 games per
+referee, vs ~20 in the playoffs) and re-ran the lean model where it actually *can* detect
+something. The between-referee lean variance didn't grow — it **shrank** (to ~0.005), **none**
+of the 102 referees had an interval clearing zero, and — the clincher — a referee's playoff
+"lean" was **uncorrelated** with their high-power regular-season lean (Spearman ≈ 0). In other
+words, the little playoff leans aren't a stable referee trait; they're sampling noise. And no
+referee called the playoffs detectably differently from their own regular-season baseline. A
+within-series design (same two teams, rotating crews) and the NBA's own Last Two Minute grades
+land in the same place. When several independent angles — including a genuinely high-powered
+one — all say "nothing here," that's about as close to an answer as observational data gets.
 
 ## What would count as evidence
 

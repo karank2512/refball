@@ -101,9 +101,7 @@ def load_odds_csv(path: str | Path) -> object:
 
 # Public 10-year games+odds archive (MIT-licensed scrape of sportsbookreview); has
 # home_close_spread + close_over_under per game. Covers seasons ~2011-2021.
-ODDS_ARCHIVE_URL = (
-    "https://raw.githubusercontent.com/flancast90/sportsbookreview-scraper/main/data/nba_archive_10Y.json"
-)
+ODDS_ARCHIVE_URL = "https://raw.githubusercontent.com/flancast90/sportsbookreview-scraper/main/data/nba_archive_10Y.json"
 
 
 def download_odds_archive(force_refresh: bool = False) -> Path:
@@ -150,7 +148,9 @@ def load_odds_archive_json(path: str | Path) -> object:
         )
     out = pd.DataFrame(rows)
     n0 = len(out)
-    out = out.dropna(subset=["game_date", "home_tricode", "away_tricode", "spread_home", "total_market"])
+    out = out.dropna(
+        subset=["game_date", "home_tricode", "away_tricode", "spread_home", "total_market"]
+    )
     out = out.drop_duplicates(subset=["game_date", "home_tricode", "away_tricode"])
     logger.info("Odds archive: %d usable rows (from %d records)", len(out), n0)
     validate_columns(out, ODDS_COLUMNS, "odds archive")

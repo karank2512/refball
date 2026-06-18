@@ -292,11 +292,22 @@ def power_check(quick: bool, shifts: tuple[int, ...] = (1, 2)):
     # (1) analytic MDE from the saved lean trace, if present
     if s.paths.stage1_lean_nc.exists():
         draws = _ref_lean_draws(az.from_netcdf(str(s.paths.stage1_lean_nc)))
-        halfwidths = [(hi - lo) / 2 for lo, hi in (hdi_interval(draws[i], s.hdi_prob) for i in range(draws.shape[0]))]
+        halfwidths = [
+            (hi - lo) / 2
+            for lo, hi in (hdi_interval(draws[i], s.hdi_prob) for i in range(draws.shape[0]))
+        ]
         mde_log = float(np.median(halfwidths))
-        rows.append({"test": "analytic_MDE", "shift_fouls": np.nan, "lean_mean": np.nan,
-                     "hdi_low": -mde_log, "hdi_high": mde_log, "detected": np.nan,
-                     "note": f"median 94% HDI half-width = {mde_log:.4f} log; ~{2 * 20.7 * mde_log / 3:.2f} foul-margin"})
+        rows.append(
+            {
+                "test": "analytic_MDE",
+                "shift_fouls": np.nan,
+                "lean_mean": np.nan,
+                "hdi_low": -mde_log,
+                "hdi_high": mde_log,
+                "detected": np.nan,
+                "note": f"median 94% HDI half-width = {mde_log:.4f} log; ~{2 * 20.7 * mde_log / 3:.2f} foul-margin",
+            }
+        )
 
     # (2) injection-recovery on the most-sampled referee
     md = prepare(use_odds=False, require_officials=True)
@@ -304,7 +315,9 @@ def power_check(quick: bool, shifts: tuple[int, ...] = (1, 2)):
     target_id = md.ref_index.ref_ids[idx]
     target_rows = np.where(md.R[:, idx] > 0)[0]
     base_home, base_away = md.home_pf.copy(), md.away_pf.copy()
-    logger.info("Injection-recovery on ref %s (%d games)", md.ref_index.names[target_id], len(target_rows))
+    logger.info(
+        "Injection-recovery on ref %s (%d games)", md.ref_index.names[target_id], len(target_rows)
+    )
 
     for a in shifts:
         md.home_pf = base_home.copy()
@@ -315,10 +328,25 @@ def power_check(quick: bool, shifts: tuple[int, ...] = (1, 2)):
         d = _ref_lean_draws(idata)[idx]
         lo, hi = hdi_interval(d, s.hdi_prob)
         detected = bool(lo > 0 or hi < 0)
-        rows.append({"test": "injection", "shift_fouls": a, "lean_mean": float(d.mean()),
-                     "hdi_low": lo, "hdi_high": hi, "detected": detected,
-                     "note": f"+{2 * a} foul-margin/game injected; P(>0)={float((d > 0).mean()):.2f}"})
-        logger.info("  shift=+%d -> lean_mean=%.3f HDI[%.3f,%.3f] detected=%s", a, d.mean(), lo, hi, detected)
+        rows.append(
+            {
+                "test": "injection",
+                "shift_fouls": a,
+                "lean_mean": float(d.mean()),
+                "hdi_low": lo,
+                "hdi_high": hi,
+                "detected": detected,
+                "note": f"+{2 * a} foul-margin/game injected; P(>0)={float((d > 0).mean()):.2f}",
+            }
+        )
+        logger.info(
+            "  shift=+%d -> lean_mean=%.3f HDI[%.3f,%.3f] detected=%s",
+            a,
+            d.mean(),
+            lo,
+            hi,
+            detected,
+        )
 
     md.home_pf, md.away_pf = base_home, base_away  # restore
     return pd.DataFrame(rows)
@@ -397,7 +425,9 @@ def run(
         detected = inj[inj["detected"] == True]  # noqa: E712
         smallest = int(detected["shift_fouls"].min()) if len(detected) else None
         if smallest is None:
-            print("No injected lean was detected at the tested sizes -> design is severely underpowered.")
+            print(
+                "No injected lean was detected at the tested sizes -> design is severely underpowered."
+            )
         else:
             print(
                 f"Smallest detected injection: +{smallest} fouls/game (= +{2 * smallest} foul-margin). "

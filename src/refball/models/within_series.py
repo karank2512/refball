@@ -50,7 +50,9 @@ def prepare():
         )
     index = build_ref_index(df)
     R, _ = build_membership_matrix(df, index)
-    logger.info("Within-series data: %d games, %d series, %d refs", len(df), n_series, len(index.ref_ids))
+    logger.info(
+        "Within-series data: %d games, %d series, %d refs", len(df), n_series, len(index.ref_ids)
+    )
     return df, index, R
 
 
@@ -86,13 +88,19 @@ def build_model(df, index, R, R_override=None):
         # non-centered to avoid the funnel geometry (~5 obs per matchup cell).
         sigma_matchup = pm.HalfNormal("sigma_matchup", 1.0)
         matchup_eff = pm.Deterministic(
-            "matchup_effect", pm.Normal("matchup_z", 0.0, 1.0, dims="matchup") * sigma_matchup, dims="matchup"
+            "matchup_effect",
+            pm.Normal("matchup_z", 0.0, 1.0, dims="matchup") * sigma_matchup,
+            dims="matchup",
         )
 
         sigma_vol = pm.HalfNormal("sigma_ref_vol", s.sigma_ref_total_prior)
-        ref_vol = pm.Deterministic("ref_vol_effect", pm.Normal("vol_z", 0, 1, dims="ref") * sigma_vol, dims="ref")
+        ref_vol = pm.Deterministic(
+            "ref_vol_effect", pm.Normal("vol_z", 0, 1, dims="ref") * sigma_vol, dims="ref"
+        )
         sigma_lean = pm.HalfNormal("sigma_ref_lean", s.sigma_ref_lean_prior)
-        ref_lean = pm.Deterministic("ref_lean_effect", pm.Normal("lean_z", 0, 1, dims="ref") * sigma_lean, dims="ref")
+        ref_lean = pm.Deterministic(
+            "ref_lean_effect", pm.Normal("lean_z", 0, 1, dims="ref") * sigma_lean, dims="ref"
+        )
 
         eta = (
             alpha
@@ -135,19 +143,30 @@ def run(quick: bool, n_placebo: int = 3):
     df, index, R = prepare()
     prob = s.hdi_prob
     idata = _fit(build_model(df, index, R), quick)
-    diag = summarize_diagnostics(idata, var_names=["alpha", "beta_home", "sigma_ref_lean", "ref_lean_effect"])
+    diag = summarize_diagnostics(
+        idata, var_names=["alpha", "beta_home", "sigma_ref_lean", "ref_lean_effect"]
+    )
     print_diagnostics("Within-series lean model", diag)
 
-    lean = idata.posterior["ref_lean_effect"].stack(z=("chain", "draw")).transpose("ref", "z").values
+    lean = (
+        idata.posterior["ref_lean_effect"].stack(z=("chain", "draw")).transpose("ref", "z").values
+    )
     recs = []
     for i, rid in enumerate(index.ref_ids):
         d = lean[i]
         lo, hi = hdi_interval(d, prob)
-        recs.append({
-            "ref_id": rid, "referee": index.names[rid], "games": index.games_count[rid],
-            "lean_mean": float(d.mean()), "hdi_low": lo, "hdi_high": hi,
-            "p_lean_gt0": float((d > 0).mean()), "excludes_zero": bool(lo > 0 or hi < 0),
-        })
+        recs.append(
+            {
+                "ref_id": rid,
+                "referee": index.names[rid],
+                "games": index.games_count[rid],
+                "lean_mean": float(d.mean()),
+                "hdi_low": lo,
+                "hdi_high": hi,
+                "p_lean_gt0": float((d > 0).mean()),
+                "excludes_zero": bool(lo > 0 or hi < 0),
+            }
+        )
     eff = pd.DataFrame(recs).sort_values("lean_mean", ascending=False).reset_index(drop=True)
 
     real_sigma = float(idata.posterior["sigma_ref_lean"].values.mean())
@@ -157,23 +176,35 @@ def run(quick: bool, n_placebo: int = 3):
     idata.to_netcdf(str(s.paths.models / "within_series.nc"))
     eff.to_parquet(s.paths.processed / "within_series_effects.parquet", index=False)
     summary = {
-        "n_games": int(len(df)), "n_series": int(df["series_id"].nunique()), "n_refs": int(len(index.ref_ids)),
+        "n_games": int(len(df)),
+        "n_series": int(df["series_id"].nunique()),
+        "n_refs": int(len(index.ref_ids)),
         "sigma_ref_lean_within_series": real_sigma,
         "placebo_sigma_mean": float(np.mean(placebo)),
         "crews_excluding_zero": int(eff["excludes_zero"].sum()),
         "beta_home_mean": float(idata.posterior["beta_home"].values.mean()),
         "diagnostics": diag,
     }
-    (s.paths.processed / "within_series_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    (s.paths.processed / "within_series_summary.json").write_text(
+        json.dumps(summary, indent=2), encoding="utf-8"
+    )
 
     print("\n=== WITHIN-SERIES IDENTIFICATION (teams held fixed within each playoff series) ===")
-    print(f"games / series / refs:      {summary['n_games']} / {summary['n_series']} / {summary['n_refs']}")
-    print(f"home-court foul effect:     {summary['beta_home_mean']:+.3f} log (negative => home whistled less)")
+    print(
+        f"games / series / refs:      {summary['n_games']} / {summary['n_series']} / {summary['n_refs']}"
+    )
+    print(
+        f"home-court foul effect:     {summary['beta_home_mean']:+.3f} log (negative => home whistled less)"
+    )
     print(f"within-series sigma_lean:   {real_sigma:.4f}  (pooled Stage 1B was ~0.013)")
     print(f"placebo sigma_lean mean:    {np.mean(placebo):.4f}")
-    print(f"refs whose lean HDI excludes 0: {summary['crews_excluding_zero']} / {summary['n_refs']}")
-    print("Interpretation: even with the matchup held fixed, no referee shows a distinguishable "
-          "within-series home-foul lean (screening, with uncertainty).")
+    print(
+        f"refs whose lean HDI excludes 0: {summary['crews_excluding_zero']} / {summary['n_refs']}"
+    )
+    print(
+        "Interpretation: even with the matchup held fixed, no referee shows a distinguishable "
+        "within-series home-foul lean (screening, with uncertainty)."
+    )
     return idata, eff, summary
 
 

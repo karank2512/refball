@@ -41,10 +41,19 @@ def prepare_l2m():
     s = get_settings()
     l2m_path = s.paths.processed / "l2m_game_table.parquet"
     if not s.paths.modeling_table.exists() or not l2m_path.exists():
-        raise FileNotFoundError("Need modeling_table.parquet and l2m_game_table.parquet (run data.l2m).")
+        raise FileNotFoundError(
+            "Need modeling_table.parquet and l2m_game_table.parquet (run data.l2m)."
+        )
     mt = pd.read_parquet(s.paths.modeling_table)
     l2m = pd.read_parquet(l2m_path)[
-        ["game_id", "l2m_graded", "l2m_errors", "err_against_home", "err_against_away", "net_home_error_adv"]
+        [
+            "game_id",
+            "l2m_graded",
+            "l2m_errors",
+            "err_against_home",
+            "err_against_away",
+            "net_home_error_adv",
+        ]
     ]
     df = mt.merge(l2m, on="game_id", how="inner")
     df = df[df["has_officials"]].reset_index(drop=True)
@@ -66,14 +75,20 @@ def build_model(df, index, R):
 
     with pm.Model(coords=coords) as model:
         a = pm.Normal("a", base, 1.0)
-        b = pm.Normal("home_error_bias", 0.0, 0.5)  # >0 => clutch errors net-favor home (leaguewide)
+        b = pm.Normal(
+            "home_error_bias", 0.0, 0.5
+        )  # >0 => clutch errors net-favor home (leaguewide)
 
         sigma_vol = pm.HalfNormal("sigma_crew_vol", 0.3)
-        ref_vol = pm.Deterministic("ref_vol_effect", pm.Normal("vol_z", 0, 1, dims="ref") * sigma_vol, dims="ref")
+        ref_vol = pm.Deterministic(
+            "ref_vol_effect", pm.Normal("vol_z", 0, 1, dims="ref") * sigma_vol, dims="ref"
+        )
         crew_vol = pm.math.dot(R, ref_vol)
 
         sigma_lean = pm.HalfNormal("sigma_crew_lean", 0.3)
-        ref_lean = pm.Deterministic("ref_error_lean", pm.Normal("lean_z", 0, 1, dims="ref") * sigma_lean, dims="ref")
+        ref_lean = pm.Deterministic(
+            "ref_error_lean", pm.Normal("lean_z", 0, 1, dims="ref") * sigma_lean, dims="ref"
+        )
         crew_lean = pm.math.dot(R, ref_lean)
 
         mu_away = pm.math.exp(a + b + crew_vol + crew_lean)  # errors favoring home
@@ -114,7 +129,9 @@ def run(quick: bool, n_placebo: int = 3):
     prob = s.hdi_prob
 
     idata = _fit(build_model(df, index, R), quick)
-    diag = summarize_diagnostics(idata, var_names=["a", "home_error_bias", "sigma_crew_lean", "ref_error_lean"])
+    diag = summarize_diagnostics(
+        idata, var_names=["a", "home_error_bias", "sigma_crew_lean", "ref_error_lean"]
+    )
     print_diagnostics("L2M clutch-error crew model", diag)
 
     # Overall leaguewide clutch home-error bias
@@ -128,12 +145,21 @@ def run(quick: bool, n_placebo: int = 3):
     for i, rid in enumerate(index.ref_ids):
         d = lean[i]
         lo, hi = hdi_interval(d, prob)
-        recs.append({
-            "ref_id": rid, "referee": index.names[rid], "games": index.games_count[rid],
-            "error_lean_mean": float(d.mean()), "hdi_low": lo, "hdi_high": hi,
-            "p_favor_home": float((d > 0).mean()), "excludes_zero": bool(lo > 0 or hi < 0),
-        })
-    effects = pd.DataFrame(recs).sort_values("error_lean_mean", ascending=False).reset_index(drop=True)
+        recs.append(
+            {
+                "ref_id": rid,
+                "referee": index.names[rid],
+                "games": index.games_count[rid],
+                "error_lean_mean": float(d.mean()),
+                "hdi_low": lo,
+                "hdi_high": hi,
+                "p_favor_home": float((d > 0).mean()),
+                "excludes_zero": bool(lo > 0 or hi < 0),
+            }
+        )
+    effects = (
+        pd.DataFrame(recs).sort_values("error_lean_mean", ascending=False).reset_index(drop=True)
+    )
 
     placebo = _placebo(df, index, R, quick, n_placebo)
     real_sigma = float(idata.posterior["sigma_crew_lean"].values.mean())
@@ -142,29 +168,45 @@ def run(quick: bool, n_placebo: int = 3):
     idata.to_netcdf(str(s.paths.models / "l2m_crew.nc"))
     effects.to_parquet(s.paths.processed / "l2m_crew_effects.parquet", index=False)
     summary = {
-        "n_games": int(len(df)), "n_crews": int(len(index.ref_ids)),
+        "n_games": int(len(df)),
+        "n_crews": int(len(index.ref_ids)),
         "total_errors": int(df["l2m_errors"].sum()),
         "err_against_home": int(df["err_against_home"].sum()),
         "err_against_away": int(df["err_against_away"].sum()),
-        "home_error_bias_mean": float(np.mean(b)), "home_error_bias_hdi": [b_lo, b_hi],
-        "p_bias_favors_home": float((b > 0).mean()), "favor_home_to_away_rate_ratio": rate_ratio,
+        "home_error_bias_mean": float(np.mean(b)),
+        "home_error_bias_hdi": [b_lo, b_hi],
+        "p_bias_favors_home": float((b > 0).mean()),
+        "favor_home_to_away_rate_ratio": rate_ratio,
         "crews_lean_excludes_zero": int(effects["excludes_zero"].sum()),
-        "real_sigma_crew_lean": real_sigma, "placebo_sigma_crew_lean_mean": float(np.mean(placebo)),
+        "real_sigma_crew_lean": real_sigma,
+        "placebo_sigma_crew_lean_mean": float(np.mean(placebo)),
         "diagnostics": diag,
     }
-    (s.paths.processed / "l2m_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    (s.paths.processed / "l2m_summary.json").write_text(
+        json.dumps(summary, indent=2), encoding="utf-8"
+    )
 
     print("\n=== L2M CLUTCH-ERROR FINDINGS (final ~2 min of close playoff games) ===")
     print(f"games covered:            {summary['n_games']} (of 585 playoff games)")
-    print(f"clutch errors:            {summary['total_errors']} "
-          f"(against home {summary['err_against_home']} / against away {summary['err_against_away']})")
-    print(f"overall home-error bias:  {summary['home_error_bias_mean']:+.3f} log "
-          f"(94% HDI [{b_lo:+.3f}, {b_hi:+.3f}]); P(favors home)={summary['p_bias_favors_home']:.2f}")
+    print(
+        f"clutch errors:            {summary['total_errors']} "
+        f"(against home {summary['err_against_home']} / against away {summary['err_against_away']})"
+    )
+    print(
+        f"overall home-error bias:  {summary['home_error_bias_mean']:+.3f} log "
+        f"(94% HDI [{b_lo:+.3f}, {b_hi:+.3f}]); P(favors home)={summary['p_bias_favors_home']:.2f}"
+    )
     print(f"  -> favor-home:favor-away error-rate ratio = {rate_ratio:.2f} (1.0 = no bias)")
-    print(f"crews whose lean HDI excludes 0: {summary['crews_lean_excludes_zero']} / {summary['n_crews']}")
-    print(f"placebo check: real sigma_crew_lean={real_sigma:.4f} vs shuffled mean={np.mean(placebo):.4f}")
-    print("NOTE: crew-level (not individual ref); NBA grades its own calls; only close-late games "
-          "(selection). Screening evidence with uncertainty, not proof.")
+    print(
+        f"crews whose lean HDI excludes 0: {summary['crews_lean_excludes_zero']} / {summary['n_crews']}"
+    )
+    print(
+        f"placebo check: real sigma_crew_lean={real_sigma:.4f} vs shuffled mean={np.mean(placebo):.4f}"
+    )
+    print(
+        "NOTE: crew-level (not individual ref); NBA grades its own calls; only close-late games "
+        "(selection). Screening evidence with uncertainty, not proof."
+    )
     return idata, effects, summary
 
 

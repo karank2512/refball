@@ -139,6 +139,13 @@ direct public measure of "did the crew err, and who benefited" — but it covers
 games (selection), grades the **crew** not the individual official, and is the **NBA grading
 its own calls**. The finding mirrors the foul models: no crew-level clutch-error signal beyond
 chance, and only a faint, inconclusive leaguewide home tilt.
+
+**Additional evidence streams** (see the *Evidence Streams* page) directly address the power
+and identification gaps: a **within-series fixed-effects** design (teams held fixed, crews
+rotate); a **regular-season power test** (~290 games/referee — the high-power check the
+playoffs can't do, where playoff "leans" turn out to be uncorrelated noise); **play-by-play**
+foul-type + game-state cleaning (discretionary fouls in competitive states); and a real
+**closing-line market control**. All four converge on the same null.
 """
 )
 

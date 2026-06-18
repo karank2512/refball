@@ -115,6 +115,13 @@ def load_robustness(name: str) -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
+def load_json_summary(name: str) -> dict:
+    """Load any processed/<name>.json summary, or {} if absent."""
+    p = PATHS.processed / f"{name}.json"
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+
+
+@st.cache_data(show_spinner=False)
 def load_l2m_summary() -> dict:
     p = PATHS.processed / "l2m_summary.json"
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}

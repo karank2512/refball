@@ -29,7 +29,9 @@ from refball.utils.provenance import log_source
 
 logger = get_logger(__name__)
 
-RAW_URL = "https://raw.githubusercontent.com/atlhawksfanatic/L2M/master/1-tidy/L2M/L2M_stats_nba.csv"
+RAW_URL = (
+    "https://raw.githubusercontent.com/atlhawksfanatic/L2M/master/1-tidy/L2M/L2M_stats_nba.csv"
+)
 ERROR_DECISIONS = {"IC", "INC"}  # incorrect call / incorrect non-call
 
 
@@ -49,7 +51,9 @@ def download_l2m(force_refresh: bool = False):
     logger.info("Downloading L2M CSV from %s", RAW_URL)
 
     def _get():
-        r = requests.get(RAW_URL, timeout=s.request_timeout_s, headers={"User-Agent": "refball-research"})
+        r = requests.get(
+            RAW_URL, timeout=s.request_timeout_s, headers={"User-Agent": "refball-research"}
+        )
         r.raise_for_status()
         return r.content
 
@@ -73,8 +77,15 @@ def load_events(force_refresh: bool = False):
     import pandas as pd
 
     path = download_l2m(force_refresh)
-    want = ["GAME_ID", "decision", "call_type", "playoff", "season",
-            "committing_side", "disadvantaged_side"]
+    want = [
+        "GAME_ID",
+        "decision",
+        "call_type",
+        "playoff",
+        "season",
+        "committing_side",
+        "disadvantaged_side",
+    ]
     df = pd.read_csv(path, usecols=lambda c: c in want, low_memory=False)
     df["game_id"] = df["GAME_ID"].map(_norm_gid)
     df = df.dropna(subset=["game_id"])
@@ -107,7 +118,9 @@ def build_game_table(force_refresh: bool = False):
                 "err_against_away": against_away,
                 # errors hurting away == errors favoring home
                 "net_home_error_adv": against_away - against_home,
-                "playoff": bool(g["playoff"].astype("string").isin(["True", "TRUE", "1", "yes"]).any()),
+                "playoff": bool(
+                    g["playoff"].astype("string").isin(["True", "TRUE", "1", "yes"]).any()
+                ),
             }
         )
 
@@ -142,15 +155,23 @@ def main(argv: list[str] | None = None) -> int:
         print("\n=== L2M COVERAGE QC ===")
         print(f"L2M games total:            {len(table)}")
         print(f"our modeling games:         {len(mt)}")
-        print(f"covered by L2M (merged):    {len(merged)} ({100 * len(merged) / max(len(mt), 1):.1f}%)")
+        print(
+            f"covered by L2M (merged):    {len(merged)} ({100 * len(merged) / max(len(mt), 1):.1f}%)"
+        )
         if len(merged):
-            print(f"mean net home-error adv:    {merged['net_home_error_adv'].mean():+.3f} "
-                  f"(>0 => clutch errors net-favor home)")
+            print(
+                f"mean net home-error adv:    {merged['net_home_error_adv'].mean():+.3f} "
+                f"(>0 => clutch errors net-favor home)"
+            )
             print(f"total clutch errors:        {int(merged['l2m_errors'].sum())}")
-            print(f"  against home / against away: {int(merged['err_against_home'].sum())} / "
-                  f"{int(merged['err_against_away'].sum())}")
+            print(
+                f"  against home / against away: {int(merged['err_against_home'].sum())} / "
+                f"{int(merged['err_against_away'].sum())}"
+            )
         print("========================")
-    print(f"[l2m] wrote {len(table)} games -> {get_settings().paths.processed / 'l2m_game_table.parquet'}")
+    print(
+        f"[l2m] wrote {len(table)} games -> {get_settings().paths.processed / 'l2m_game_table.parquet'}"
+    )
     return 0
 
 

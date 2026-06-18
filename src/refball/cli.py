@@ -22,6 +22,9 @@ _COMMANDS = {
     "l2m": ("refball.data.l2m", "main"),
     "l2m-model": ("refball.models.l2m_model", "main"),
     "within-series": ("refball.models.within_series", "main"),
+    "pbp": ("refball.data.pbp", "main"),
+    "pbp-clean": ("refball.models.pbp_clean", "main"),
+    "regular-season": ("refball.models.regular_season", "main"),
 }
 
 

@@ -226,10 +226,14 @@ def assemble_games(seasons: list[int], force_refresh: bool = False, season_type:
     games = games[GAME_COLUMNS]
 
     n_missing_off = int(games["official_1"].isna().sum())
-    logger.info("Assembled %d %s games; %d missing officials", len(games), season_type, n_missing_off)
+    logger.info(
+        "Assembled %d %s games; %d missing officials", len(games), season_type, n_missing_off
+    )
 
     s.paths.ensure()
-    out = s.paths.games_regular_interim if _type_tag(season_type) == "reg" else s.paths.games_interim
+    out = (
+        s.paths.games_regular_interim if _type_tag(season_type) == "reg" else s.paths.games_interim
+    )
     games.to_parquet(out, index=False)
     log_source(
         "nba_api",
@@ -246,9 +250,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Pull NBA games + officials (nba_api).")
     parser.add_argument("--season-start", type=int, default=None)
     parser.add_argument("--season-end", type=int, default=None)
-    parser.add_argument(
-        "--season-type", default="Playoffs", choices=["Playoffs", "Regular Season"]
-    )
+    parser.add_argument("--season-type", default="Playoffs", choices=["Playoffs", "Regular Season"])
     parser.add_argument("--force-refresh", action="store_true")
     ns = parser.parse_args(argv)
 
@@ -258,7 +260,9 @@ def main(argv: list[str] | None = None) -> int:
         if ns.season_start and ns.season_end
         else s.seasons
     )
-    logger.info("Pulling %s seasons %s (force_refresh=%s)", ns.season_type, seasons, ns.force_refresh)
+    logger.info(
+        "Pulling %s seasons %s (force_refresh=%s)", ns.season_type, seasons, ns.force_refresh
+    )
     games, out = assemble_games(seasons, force_refresh=ns.force_refresh, season_type=ns.season_type)
     print(f"[pull] assembled {len(games)} {ns.season_type} games -> {out}")
     return 0
