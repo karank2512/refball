@@ -247,7 +247,7 @@ To attack the power and identification gaps, four more public-data angles — an
   regular-season games (median ~293 games/referee, 102 refs)** — i.e. with real power — the
   lean variance *shrinks further* (`sigma ≈ 0.005`), **0 of 102** refs have an interval
   excluding zero, a referee's playoff lean is **uncorrelated** with their high-power
-  regular-season lean (Spearman ≈ 0.04 → playoff leans are sampling **noise**), and **0 of
+  regular-season lean (Spearman ≈ 0.01 → playoff leans are sampling **noise**), and **0 of
   102** behave differently in the playoffs than their own baseline. This turns the
   *underpowered* null into a *high-power* null.
 - **Within-series identification.** Holding the matchup fixed (series × team effects; teams

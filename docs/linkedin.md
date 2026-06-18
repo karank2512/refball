@@ -2,37 +2,33 @@
 
 ---
 
-Every NBA playoff run, the same argument flares up: *"The refs decided that one."* Scott
-Foster's name trends, box scores get screenshotted, and very little of it gets tested
-rigorously.
+Every NBA playoff run, the same argument flares up: *"the refs decided that one."* Scott
+Foster's name trends, a foul-margin screenshot goes viral, and almost none of it gets tested.
 
-So I built a small, honest framework to ask the question properly: **how much are referee
-crews associated with the playoff whistle — and how much does that whistle actually show up
-on the scoreboard?**
+So I built a reproducible, uncertainty-first framework to ask the question properly — then spent
+most of my effort trying to *break* my own answer.
 
-It's a Bayesian, observational project (PyMC + ArviZ), and it's deliberately un-sensational:
+🏀 The spine: refs → fouls → point differential, estimated with Bayesian partial pooling (PyMC).
+A three-person crew is modeled with multi-membership effects; every estimate ships with a
+credible interval, not a point estimate.
 
-🏀 **Refs → fouls → point differential.** Three linked models estimate (1) total foul volume,
-(2) a directional home-vs-away foul "lean," and (3) how foul and free-throw margins relate to
-the final point differential — controlling for the betting line, pace, teams, and season.
+📉 First pass: across **585 playoff games**, no referee shows a detectable home-foul lean. But an
+injection-recovery test showed the playoffs are *underpowered* — so "no effect" wasn't yet a fair
+claim.
 
-📊 **Uncertainty everywhere.** Partial pooling means a referee with a few playoff games gets
-shrunk toward zero, not crowned an outlier. A three-person crew is modeled with
-multi-membership effects (no crew-chief-takes-all). Every ranking ships with a 94% credible
-interval and a posterior probability — never a bare point estimate.
+🔬 So I went and got the power: **8,289 regular-season games (~290 per referee)**. The model
+*could* now detect a lean — and still found none. The lean variance *shrank* toward zero, **0 of
+102** referees cleared zero, and a referee's playoff "lean" was **uncorrelated** with their
+high-power regular-season lean (Spearman ≈ 0.01). The playoff leans are sampling noise.
 
-🧪 **Built to be wrong gracefully.** Permutation placebos (shuffle the crews), leave-one-
-season-out checks, PSIS-LOO model comparison, and with/without-odds sensitivity. If referee
-effects don't survive, the project says so.
+Five more angles agree — within-series identification, the NBA's own Last Two Minute clutch-call
+grades (0/55 crews), play-by-play game-state cleaning, and a closing-line control. The only real
+signal is a faint, well-documented *home* tilt.
 
-The part I care about most is the framing. Referee assignments aren't random — better crews
-may get bigger games — so this is **association, not proof, and certainly not a claim of
-intent or misconduct.** A statistical outlier is a prompt for scrutiny, not a verdict.
+This isn't proof refs are clean, and it's **not** a claim of bias or intent — assignment isn't
+random. It's the strongest observational answer the public data supports: **no detectable
+referee swing, even with the power to find one.**
 
-Code is reproducible end-to-end, with an interactive Streamlit site (referee caterpillar
-plots, a crew-level game explorer, full diagnostics, and a limitations page).
+Code + interactive site are open. If you do causal inference or sports analytics, try to break it.
 
-If you work in sports analytics or causal inference, I'd genuinely love your critique of the
-identification strategy.
-
-#NBA #SportsAnalytics #Bayesian #DataScience #PyMC #BasketballAnalytics
+#NBA #SportsAnalytics #Bayesian #DataScience #PyMC

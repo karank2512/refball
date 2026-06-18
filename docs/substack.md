@@ -1,194 +1,154 @@
-# Ref Ball? What the Whistle Actually Does to the Scoreboard
+# Ref Ball? I Tried Six Ways to Catch NBA Refs Swinging Games. Here's What the Data Says.
 
-### A Bayesian, uncertainty-first look at NBA playoff referees — built to find a signal *or* to honestly come up empty
+### A Bayesian, uncertainty-first investigation — built to find a signal if one exists, and honest enough to report when it doesn't
 
 ---
 
-Every spring it happens. A playoff game tilts on a whistle, a star picks up a questionable
-third foul, free throws pile up on one side — and within minutes the internet has rendered its
-verdict. *The refs decided that one.* Scott Foster trends. Somebody posts a foul-margin
-screenshot. And then we all move on, having "proven" exactly nothing.
+Every spring it happens. A playoff game tilts on a whistle, a star picks up a cheap third foul,
+the free throws pile up on one side — and within minutes the internet has its verdict. *The refs
+decided that one.* Scott Foster trends. Somebody posts a foul-margin screenshot. And then we all
+move on, having "proven" exactly nothing.
 
-I wanted to do the boring, useful version instead: build a transparent, reproducible framework
-that turns "the refs decided it" into an actual estimate — **with an honest uncertainty
-interval attached** — and then stress-test that estimate until it either survives or falls
-apart.
+I wanted to do the boring, useful version: build a transparent, reproducible framework that turns
+"the refs decided it" into an actual estimate with an honest uncertainty interval — and then
+spend most of the effort trying to *break* my own answer.
 
-Let me be unambiguous up front, because this topic invites bad-faith readings: **nothing in
-this project claims any referee, crew, team, or league fixed, rigged, swung, or manipulated a
-game, or acted with intent.** Referee assignments are not random. Playoff crews are chosen by
-the league, and better or more experienced crews may be sent to the biggest, most physical,
-most competitive games. That alone can produce patterns that *look* like a referee effect but
-are really a selection effect. So everything here is an **observational, associational
-screening metric** — a prompt for scrutiny, never a verdict.
+Let me be unambiguous up front, because this topic invites bad-faith readings. **Nothing here
+claims any referee, crew, team, or league fixed, rigged, swung, or manipulated a game, or acted
+with intent.** Referee assignments are not random — the NBA assigns playoff crews on merit,
+trimming the pool by regular-season grades — so any pattern can be a *selection* effect, not a
+*referee* effect. Everything below is an **observational screening metric**, reported with
+uncertainty. A statistical outlier is a prompt for scrutiny, never a verdict.
 
-With that said, here's what I tested and how.
+With that said: I came at this six different ways, and they all land in the same place.
 
 ## What I tested
 
-The project follows one causal-looking spine — while being very clear it is *not* clean causal
-identification:
+The causal-looking spine is simple:
 
-```text
-Referee crew → foul environment / foul margin → free throws + game flow → point differential
-```
+> referee crew → foul environment / foul margin → free throws + game flow → point differential
 
-Concretely, three questions:
+Concretely, three questions. Do specific officials get associated with **more fouls**? With a
+directional **home-vs-away foul margin** (a "lean")? And does that foul margin actually **move
+the final score**, once you control for team strength? Then I compose them into a per-referee
+"scoreboard swing." Crucially — a *positive* home lean means the home team is **whistled more**,
+which is the opposite of being favored.
 
-1. **Volume.** Are specific officials associated with *more or fewer total fouls*, after
-   accounting for pace, the two teams, the season, and the betting market?
-2. **Lean.** Are specific officials associated with a *directional* foul margin — `home fouls −
-   away fouls`? I call this a "home-foul lean." Crucial nuance: a *positive* lean means the
-   home team is **whistled more**, which is the opposite of being favored.
-3. **Translation.** How does the foul margin (and the free-throw margin it creates) relate to
-   the **final point differential**, after controlling for the pregame spread and total?
+## The data (all public)
 
-Then I compose them: for each official, multiply their estimated foul-margin association by the
-foul-margin-to-points coefficient to get a **mediated "scoreboard" effect** — propagated across
-the entire posterior, not as a point estimate.
+- **Box scores + officials** for **585 playoff games (2017-18 through 2023-24)** from the NBA's
+  stats API via `nba_api` — 99.8% with the assigned crew, 58 distinct playoff officials.
+- **8,289 regular-season games** over the same span — 102 referees at a median of **~293 games
+  each** (vs. ~21 in the playoffs). This is the dataset that gives the study real *power*.
+- **Play-by-play** for every playoff game — to type each foul (shooting / personal / loose-ball
+  vs. offensive / technical) and tag the score and clock when it happened.
+- The NBA's own **Last Two Minute (L2M) reports** — graded calls/non-calls in the final two
+  minutes of close games — via a public, MIT-licensed mirror.
+- **Closing betting lines** (a public 10-year archive) as a market-based control for team
+  strength.
 
-## The data
+## The models
 
-- **Box scores and officials** come from the NBA's public stats endpoints via `nba_api`:
-  playoff game logs (points, personal fouls, free throws, and the components needed to estimate
-  possessions) plus the assigned three-person crew for each game.
-- **Betting lines** (spread + total) come through a deliberately *swappable* adapter. Odds
-  coverage is the messiest part of any project like this, so the adapter validates its columns,
-  normalizes team names, and **never** joins on the NBA game id (odds feeds don't share that
-  id). Joins happen on date + normalized home/away teams, with a one-day tolerance, and the
-  pipeline prints the match rate and refuses to pretend a bad join is a good one.
-- Coverage target: the **[insert season range, e.g., 2017–2025]** playoffs, **[insert N]**
-  games, **[insert number of distinct officials]** officials.
+This is Bayesian hierarchical modeling (PyMC). Three design choices do the heavy lifting.
+**Partial pooling:** a referee with a handful of games is shrunk toward zero unless the data keep
+supporting an effect. **Multi-membership:** a game has three officials, so each contributes
+one-third of a "crew" effect — no crew-chief-takes-all, no triple-counting. **Uncertainty
+everywhere:** every number ships with a 94% credible interval and a posterior probability, never
+a bare point estimate. I validated the whole pipeline on synthetic data with *known* planted
+effects; it recovers them in the right direction and stays humble when the sample is thin.
 
-When lines can't be matched well, the pipeline runs a no-odds version of the model and flags it
-as weaker. When officials are missing, those games drop out of the referee models (and the drop
-is logged). No silent fudging.
+## What I found
 
-## The model
+**Fouls barely move the scoreboard.** The home foul margin is almost uncorrelated with the final
+margin (r ≈ 0.02). Modeled properly, the foul-margin → point-differential coefficient is
+**+0.03 points per foul (94% HDI −0.23 to +0.28)** — indistinguishable from zero. Game state is
+why: when a team trails late it fouls *on purpose*, and garbage-time fouls don't matter. Even
+after I rebuilt the margin from *discretionary* fouls in *competitive* states, the coefficient
+only nudged to **−0.14 (HDI −0.40 to +0.13)** — the expected direction, but still inconclusive.
+The scoreboard effect of fouls runs almost entirely through *made free throws* (a strong,
+unsurprising +0.95 points per made-FT-margin), not through any residual "extra whistle."
 
-This is a Bayesian hierarchical model (PyMC), and three design choices do most of the work.
+**No referee shows a detectable foul lean — in the playoffs.** Zero of 58 officials have a
+home-lean interval that clears zero, and when I shuffle the crews across games (a placebo) the
+lean variance is statistically identical (0.013 vs. 0.013). *But* — and this is the honest part
+most analyses skip — I checked whether the method even *could* detect a real lean. I injected a
+known, swing-relevant **+1 foul/game** lean into the most-sampled referee and refit: **not
+detected.** Even **+2 foul/game** wasn't reliably recovered. With a few hundred playoff games,
+the design is simply **underpowered**, so "no playoff lean" wasn't yet a fair claim.
 
-**Partial pooling.** A referee who worked four playoff games should not rocket to the top of a
-leaderboard on the strength of four games. The hierarchy *shrinks* noisy referee estimates
-toward zero unless the data repeatedly support an effect. The priors on the referee
-variation are intentionally tight, because playoff samples are small and overconfidence is the
-enemy.
+**So I went and got the power.** I re-ran the lean model on **8,289 regular-season games**, where
+referees work ~290 games apiece — more than enough to surface a real tendency. The result is the
+strongest in the project: the between-referee lean variance didn't grow, it **shrank** (to
+≈0.005); **0 of 102** referees cleared zero; and the clincher — a referee's *playoff* lean is
+**uncorrelated** with their high-power *regular-season* lean (Spearman ≈ 0.01). In plain terms,
+the little playoff leans aren't a stable referee trait — **they're sampling noise.** And **0 of
+102** referees officiated the playoffs detectably differently from their own regular-season
+baseline. So much for "brought in for the big games."
 
-**Multi-membership.** A game has three officials, not one. The model doesn't credit the whole
-game to the crew chief, and it doesn't cheat by copying each game three times as if the
-officials were independent observations. Instead each game contributes a row of one-third
-weights, and a crew's effect is the *average* of its officials' effects.
+**Holding the matchup fixed doesn't change it.** A playoff series is the same two teams with a
+rotating crew, so I added series × team effects — identifying the crew lean purely from the
+crew rotation *within* a series. Same answer: 0 of 58 distinguishable, variance at placebo level.
 
-**Uncertainty everywhere.** Stage 1A models total fouls as a Negative Binomial with a
-log-possessions offset. Stage 1B models home and away fouls jointly, sharing a crew *volume*
-term and a crew *lean* term (the lean enters with a plus sign on home fouls and a minus sign on
-away fouls). Stage 2 models point differential with a Student-t likelihood (robust to
-blowouts). Every reported number — total-foul effect, lean, mediated scoreboard effect — comes
-with a 94% credible interval and a posterior probability of being positive or negative. No bare
-point estimates.
+**The NBA's own grades agree.** Using the league's L2M reports — its own labels of Correct /
+Incorrect Call / Non-Call in clutch moments — I signed each error by which team it hurt across
+182 close playoff games (277 graded errors). Result: **0 of 55 crews** with a distinguishable
+error-lean, and only a faint, **inconclusive** leaguewide tilt toward home (errors favored the
+home team about **1.18×**, but the 94% interval includes zero). Caveats matter here: L2M exists
+only for close-and-late games, it grades the *crew* not the individual official, and it's the
+NBA grading its own calls.
 
-Before trusting any of it on real data, I validated the whole pipeline on a **synthetic
-dataset with planted structure** — known referee effects, a known foul-margin-to-points
-coefficient. The models recover the planted signal in the right direction and, just as
-importantly, report wide intervals when the sample is small. That's the behavior you want: a
-method that finds what's really there and stays humble about what isn't.
+**The betting line doesn't reveal a hidden swing either.** Adding the real closing spread to the
+332 games I could match barely moved the foul coefficient (−0.12 with the line vs. −0.17
+without), and referee rankings stayed stable.
 
-## Results
+## The one real signal: home court
 
-> The numbers below are placeholders until the model is run on the full real dataset. I will
-> **not** invent results. (The synthetic validation above is a methodology check, not a finding
-> about any real official.)
-
-**Foul-margin → points.** The headline coefficient is `gamma_foul_diff`: how many points of
-home point differential are associated with one extra home foul (relative to away), after the
-line and free throws. Estimate: **[insert posterior mean] points** (94% HDI **[insert
-interval]**; P(<0) = **[insert probability]**). Interpretation: the foul margin
-**[does / does not]** retain a scoreboard association beyond the mechanical free-throw channel.
-
-**Referee leans.** Sorted by posterior mean home-foul lean, the officials whose intervals sit
-furthest from zero are **[insert names + intervals]**. Note how many intervals **[comfortably
-straddle / clear]** zero — that's the story, not the ranking.
-
-**Mediated scoreboard effect.** Translated to points, the largest mediated effects are **[insert
-range, e.g., ±X points per game]**, with intervals that **[mostly include zero / …]**.
-
-**Did referee effects earn their keep?** PSIS-LOO comparison of a no-referee model vs.
-referee-volume vs. referee-volume-plus-lean: **[insert which model wins and by how much]**. If
-referee effects don't improve out-of-sample prediction, that is itself a result, and I'll say
-so plainly.
-
-**Placebo.** When I shuffle the crews across games within each season and refit, the referee
-"lean" variation **[collapses toward / stays above]** the real estimate. Real exceeds **[insert
-%]** of placebos.
-
-**Can I even detect a swing? (the part most analyses skip.)** A null is only meaningful if the
-method has the power to find a real effect. So I *inject* a known lean into the most-sampled
-official's games and check whether the model recovers it. In my run, a clearly swing-relevant
-**+1 foul/game** lean injected into a referee with ~100 games was **[insert: detected / not
-detected]**; only a **+2 foul/game** lean was reliably recovered. That means the playoff
-headline is **"no *detectable* referee swing,"** not "referees don't matter." With a few
-hundred playoff games and ~20 per official, this design would miss a modest-but-real effect —
-and saying so is the difference between an honest null and an overclaim.
-
-**So I went and got the power.** I pulled ~8,300 regular-season games (median ~290 games per
-referee, vs ~20 in the playoffs) and re-ran the lean model where it actually *can* detect
-something. The between-referee lean variance didn't grow — it **shrank** (to ~0.005), **none**
-of the 102 referees had an interval clearing zero, and — the clincher — a referee's playoff
-"lean" was **uncorrelated** with their high-power regular-season lean (Spearman ≈ 0). In other
-words, the little playoff leans aren't a stable referee trait; they're sampling noise. And no
-referee called the playoffs detectably differently from their own regular-season baseline. A
-within-series design (same two teams, rotating crews) and the NBA's own Last Two Minute grades
-land in the same place. When several independent angles — including a genuinely high-powered
-one — all say "nothing here," that's about as close to an answer as observational data gets.
+The thing the data *does* show is small and old news: home teams are whistled slightly *less*
+(about −3% on fouls), worth a fraction of a point. That's consistent with decades of work
+(*Scorecasting* attributes ~three-quarters of home-court advantage to officiating tendencies).
+It is a leaguewide, well-documented home tilt — not a specific crew tipping specific games.
 
 ## What would count as evidence
 
-Because the bar for any claim about officiating should be high, here's what would move me:
-
-- Referee variation that **survives** the permutation placebo and **leave-one-season-out**
-  checks by a wide, stable margin — not one anomalous postseason.
-- **Much larger samples** per official, shrinking the intervals.
-- **Call-level / play-by-play data** (foul types, shot locations, late-game context) so the
-  whistle is measured directly instead of through box-score totals.
-- Something approximating **random assignment** — a natural experiment — to break the selection
-  problem.
-- **Pre-registration** and **out-of-sample replication** in future playoffs.
-
-A single eye-popping point estimate with a credible interval the width of a bus is not
-evidence. It's a hypothesis.
+I held a high bar, and I'll keep holding it. What would move me: a referee lean that **survives**
+the placebo and leave-one-season-out checks by a wide, stable margin; effects that **persist**
+from regular season to playoffs (mine don't correlate at all); **call-level** data showing a
+directional pattern in *discretionary* whistles; or something approximating **random assignment**
+to break the selection problem. A single eye-popping point estimate with a bus-wide interval is
+not evidence — it's a hypothesis.
 
 ## Limitations
 
-There are two big ones. **First, power:** with a few hundred playoff games and ~20 per official,
-this design can miss a modest-but-real referee lean (my injection test only reliably recovers a
-+2-foul/game effect). So a null here means "no *detectable* swing," not "no swing" — absence of
-evidence is not evidence of absence. **Second, selection bias:** referees aren't assigned at
-random, so a referee "effect" can be a stand-in for the kinds of games that referee tends to
-work. Betting lines help me control for *who is playing and how good they are*, but they do not
-make assignment random. The models are **associational**, full stop — foul margins also reflect
-team style, pace, coaching, and deliberate late-game fouling. Playoff samples are small, so
-intervals are wide. And box-score
-fouls are a blunt instrument compared to what a possession-level dataset could reveal.
+Two big ones. **Assignment isn't random** — better crews may draw bigger games, so this is
+association, not cause; the within-series design narrows that gap but doesn't close it. And the
+models are **observational**: foul margins reflect team style, pace, coaching, and intentional
+fouling, not just officiating. The L2M layer is selected on close games. And my regular-season
+production fit, while converged, is one run — I'd want repeated full-length chains before
+treating any single decimal as gospel. None of this changes the direction of the result; it
+bounds how loudly I'm willing to state it.
 
 ## Why this matters
 
 Officiating is one of the most emotionally charged, least rigorously examined parts of sports
-discourse. The point of this project isn't to indict anyone — it's to give fans, analysts, and
-skeptics a **shared, honest tool** for asking the question, complete with the uncertainty that
-the question deserves. If the data show a stable, replicable referee-associated lean, that's
-worth understanding. If they don't, that's worth saying just as loudly. Both outcomes beat a
-screenshot and a hot take.
+discourse. The point isn't to indict anyone or to "clear" anyone — it's to give fans, analysts,
+and skeptics a **shared, honest tool**, complete with the uncertainty the question deserves. The
+most useful thing a project like this can do is be willing to find nothing, loudly, when the data
+say nothing.
 
 ## Closing
 
-The goal was never to "prove Scott Foster is rigging games." The goal was to build the best
-public, reproducible framework for asking: *how much do NBA playoff referee crews appear to
-shape the whistle, and how much does that whistle show up on the scoreboard — under honest
-uncertainty?*
+The Scott Foster of it all? He worked more of these playoff games than anyone in the sample, and
+his estimated lean is slightly *negative*, with a mediated scoreboard effect indistinguishable
+from zero. The cultural hook lands on a null — which is exactly why you run the numbers instead
+of the screenshots.
 
-The code, the models, and the interactive site are all open. If you do causal inference or
-sports analytics, I'd love for you to try to break the identification strategy. That's the
-whole idea.
+The honest bottom line: across six independent angles — including a genuinely high-powered one —
+there is **no detectable referee or crew swing in NBA playoff games**, only a faint, long-known
+home tilt. That's not proof referees never matter; it's the strongest statement observational
+data can make: *when we finally had the power to find an effect, we didn't.*
 
-*This is an independent analytics project, not affiliated with or endorsed by the NBA or any
-team or official. Nothing here asserts intent or misconduct by any person.*
+The code, the models, and the interactive site are open. If you do causal inference or sports
+analytics, please try to break the design — that's the whole idea.
+
+*This is an independent analytics project, not affiliated with or endorsed by the NBA or any team
+or official. Nothing here asserts intent or misconduct by any person.*
