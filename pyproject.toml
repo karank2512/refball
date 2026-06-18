@@ -1,0 +1,74 @@
+[project]
+name = "refball"
+version = "0.1.0"
+description = "Ref Ball? Quantifying NBA playoff referee impact through fouls and point differential (observational sports analytics)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Ref Ball project" }]
+keywords = ["nba", "referees", "bayesian", "pymc", "sports-analytics"]
+
+dependencies = [
+    "pandas>=2.1",
+    "numpy>=1.26",
+    "pyarrow>=14.0",
+    "pydantic>=2.5",
+    "pydantic-settings>=2.1",
+    "requests>=2.31",
+    "beautifulsoup4>=4.12",
+    "nba_api>=1.4",
+    "duckdb>=0.10",
+    "scikit-learn>=1.3",
+    "matplotlib>=3.8",
+    "plotly>=5.18",
+    "tenacity>=8.2",
+]
+
+[project.optional-dependencies]
+# Bayesian modeling stack (heavier; needed for fit_stage1/fit_stage2/mediation/robustness).
+model = [
+    "pymc>=5.10",
+    "arviz>=0.17",
+    "netcdf4>=1.6",
+]
+# Website.
+app = [
+    "streamlit>=1.30",
+    "plotly>=5.18",
+]
+# Dev tooling.
+dev = [
+    "ruff>=0.3",
+    "pytest>=8.0",
+    "polars>=0.20",
+]
+
+[project.scripts]
+refball = "refball.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/refball"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+ignore = [
+    "E501",  # line length handled by formatter
+    "B008",  # function call in arg default (used by pydantic/typer-style code)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["refball"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]

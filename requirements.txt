@@ -1,0 +1,27 @@
+# Core pipeline + features (light, fast to install).
+pandas>=2.1
+numpy>=1.26
+pyarrow>=14.0
+pydantic>=2.5
+pydantic-settings>=2.1
+requests>=2.31
+beautifulsoup4>=4.12
+nba_api>=1.4
+duckdb>=0.10
+scikit-learn>=1.3
+matplotlib>=3.8
+plotly>=5.18
+tenacity>=8.2
+
+# Bayesian modeling stack (heavier — pulls in pytensor/scipy).
+# Code is tested against pymc 6.0 / arviz 1.2 and written to also work on pymc 5 / arviz 0.x.
+pymc>=5.10
+arviz>=0.17
+netcdf4>=1.6   # backend for saving/loading InferenceData (.nc)
+
+# Website.
+streamlit>=1.30
+
+# Dev tooling.
+ruff>=0.3
+pytest>=8.0
