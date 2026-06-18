@@ -119,6 +119,10 @@ python -m refball.models.fit_stage2 --no-odds
 python -m refball.models.mediation
 python -m refball.models.robustness --full        # auto-detects no-odds
 
+# Direct-evidence layer: NBA Last Two Minute graded clutch calls (joins on game_id)
+python -m refball.data.l2m                         # downloads the MIT-licensed mirror, builds the table
+python -m refball.models.l2m_model                 # crew clutch-error model + placebo
+
 #   --- WITH betting lines (you supply a CSV; see "Odds CSV format" below) ---
 # python -m refball.features.build_table --odds path/to/odds.csv
 # python -m refball.models.fit_stage1               # uses the line as a control
@@ -157,6 +161,7 @@ Sampler knobs are overridable via `REFBALL_MCMC_*` env vars (see `config.py`).
 | `nba_api` `LeagueGameLog` (Playoffs, team) | scores, PF, FTA/FTM, possession inputs | cached per season |
 | `nba_api` `BoxScoreSummaryV2.officials` | assigned crew (names + ids) | cached per game |
 | Odds adapter (`data/odds.py`) | spread + total | **swappable**; local CSV / your file; validated + team-normalized |
+| **L2M reports** (`data/l2m.py`) | graded clutch calls (CC/CNC/IC/INC) → signed errors | MIT-licensed `atlhawksfanatic/L2M` mirror; **joins on `game_id`**; the most *direct* whistle measure |
 
 Joins across sources use `(game_date, home_tricode, away_tricode)` with a ±1-day tolerance —
 **never** the nba_api `game_id`, because odds feeds do not share that id namespace. Every join
@@ -221,6 +226,11 @@ adversarial self-audit (see `docs/` and the Diagnostics page):
   **+1 foul/game** lean injected into the most-sampled official is **not** detected (only +2
   is). So the honest claim is **"no *detectable* referee swing,"** *not* "referees provably
   don't affect outcomes." **Absence of evidence ≠ evidence of absence.**
+- **The most *direct* evidence agrees.** The NBA's own **Last Two Minute** graded calls (182
+  close playoff games, 277 clutch errors) show **0 of 55 crews** with a distinguishable
+  error-lean (placebo-confirmed), and only a faint, **inconclusive** leaguewide home tilt
+  (errors favor home ~1.18×, 94% HDI on the bias includes 0, P≈0.88). Caveats: crew-level (not
+  individual), close-late games only (selection), and the NBA grades its own calls.
 
 ## Main limitations
 

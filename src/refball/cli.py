@@ -19,6 +19,8 @@ _COMMANDS = {
     "mediation": ("refball.models.mediation", "main"),
     "robustness": ("refball.models.robustness", "main"),
     "synth": ("refball.data.synthetic", "main"),
+    "l2m": ("refball.data.l2m", "main"),
+    "l2m-model": ("refball.models.l2m_model", "main"),
 }
 
 

@@ -114,6 +114,24 @@ def load_robustness(name: str) -> pd.DataFrame:
     return pd.read_csv(p) if p.exists() else pd.DataFrame()
 
 
+@st.cache_data(show_spinner=False)
+def load_l2m_summary() -> dict:
+    p = PATHS.processed / "l2m_summary.json"
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+
+
+@st.cache_data(show_spinner=False)
+def load_l2m_crew_effects() -> pd.DataFrame:
+    p = PATHS.processed / "l2m_crew_effects.parquet"
+    return pd.read_parquet(p) if p.exists() else pd.DataFrame()
+
+
+@st.cache_data(show_spinner=False)
+def load_l2m_game_table() -> pd.DataFrame:
+    p = PATHS.processed / "l2m_game_table.parquet"
+    return pd.read_parquet(p) if p.exists() else pd.DataFrame()
+
+
 # --- reusable figures --------------------------------------------------------
 def caterpillar(
     df: pd.DataFrame,

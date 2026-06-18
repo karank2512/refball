@@ -131,6 +131,14 @@ sensitivity. See the Diagnostics page.
 Playoff box scores and officials come from `nba_api`; odds are loaded through a swappable
 adapter that **never** joins on nba_api game ids. Everything is cached and reproducible from
 the CLI. A synthetic generator with planted structure powers demo mode and the test suite.
+
+**Direct-evidence layer — NBA Last Two Minute (L2M) reports.** Beyond box-score fouls, the
+**Clutch Calls** page models the NBA's *own graded calls* in the final ~2 minutes of close
+games (Correct/Incorrect Call/Non-Call), signing each error by the team it hurt. It's the most
+direct public measure of "did the crew err, and who benefited" — but it covers only close-late
+games (selection), grades the **crew** not the individual official, and is the **NBA grading
+its own calls**. The finding mirrors the foul models: no crew-level clutch-error signal beyond
+chance, and only a faint, inconclusive leaguewide home tilt.
 """
 )
 
