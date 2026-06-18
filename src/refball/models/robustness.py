@@ -28,6 +28,7 @@ import numpy as np
 
 from refball.config import get_settings
 from refball.models.data_prep import ModelData, prepare
+from refball.models.diagnostics import hdi_interval
 from refball.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -260,6 +261,70 @@ def sensitivity(quick: bool, odds_available: bool = True):
 
 
 # ----------------------------------------------------------------------------
+# 5. Statistical power: analytic MDE + injection-recovery
+# ----------------------------------------------------------------------------
+def _ref_lean_draws(idata):
+    da = idata.posterior["ref_lean_effect"].stack(s=("chain", "draw"))
+    return da.transpose("ref", "s").values  # [n_refs, draws]
+
+
+def power_check(quick: bool, shifts: tuple[int, ...] = (1, 2)):
+    """Quantify whether the design could DETECT a real referee lean.
+
+    A null is only informative if the method has power. We (1) report the analytic
+    minimum-detectable-effect (median 94% HDI half-width of the fitted ref leans) and
+    (2) run an injection-recovery: add a known directional lean to the most-sampled
+    referee's games and check whether the model recovers it (94% HDI excludes 0).
+
+    ``shift = a`` adds ``a`` to home_pf and subtracts ``a`` from away_pf on that ref's
+    games -> a +2a home foul-margin/game lean. a=1 is already a clearly swing-relevant
+    effect (~0.9 pts/game). If a=1 is NOT recovered, the null is "no DETECTABLE swing",
+    not "no swing".
+    """
+    import arviz as az
+    import pandas as pd
+
+    from refball.models.fit_stage1 import build_lean_model
+
+    s = get_settings()
+    rows = []
+
+    # (1) analytic MDE from the saved lean trace, if present
+    if s.paths.stage1_lean_nc.exists():
+        draws = _ref_lean_draws(az.from_netcdf(str(s.paths.stage1_lean_nc)))
+        halfwidths = [(hi - lo) / 2 for lo, hi in (hdi_interval(draws[i], s.hdi_prob) for i in range(draws.shape[0]))]
+        mde_log = float(np.median(halfwidths))
+        rows.append({"test": "analytic_MDE", "shift_fouls": np.nan, "lean_mean": np.nan,
+                     "hdi_low": -mde_log, "hdi_high": mde_log, "detected": np.nan,
+                     "note": f"median 94% HDI half-width = {mde_log:.4f} log; ~{2 * 20.7 * mde_log / 3:.2f} foul-margin"})
+
+    # (2) injection-recovery on the most-sampled referee
+    md = prepare(use_odds=False, require_officials=True)
+    idx = int(np.argmax([md.ref_index.games_count[r] for r in md.ref_index.ref_ids]))
+    target_id = md.ref_index.ref_ids[idx]
+    target_rows = np.where(md.R[:, idx] > 0)[0]
+    base_home, base_away = md.home_pf.copy(), md.away_pf.copy()
+    logger.info("Injection-recovery on ref %s (%d games)", md.ref_index.names[target_id], len(target_rows))
+
+    for a in shifts:
+        md.home_pf = base_home.copy()
+        md.away_pf = base_away.copy()
+        md.home_pf[target_rows] = base_home[target_rows] + a
+        md.away_pf[target_rows] = np.maximum(base_away[target_rows] - a, 0)
+        idata = _fit_ll(build_lean_model(md), quick)
+        d = _ref_lean_draws(idata)[idx]
+        lo, hi = hdi_interval(d, s.hdi_prob)
+        detected = bool(lo > 0 or hi < 0)
+        rows.append({"test": "injection", "shift_fouls": a, "lean_mean": float(d.mean()),
+                     "hdi_low": lo, "hdi_high": hi, "detected": detected,
+                     "note": f"+{2 * a} foul-margin/game injected; P(>0)={float((d > 0).mean()):.2f}"})
+        logger.info("  shift=+%d -> lean_mean=%.3f HDI[%.3f,%.3f] detected=%s", a, d.mean(), lo, hi, detected)
+
+    md.home_pf, md.away_pf = base_home, base_away  # restore
+    return pd.DataFrame(rows)
+
+
+# ----------------------------------------------------------------------------
 # Orchestration
 # ----------------------------------------------------------------------------
 def _odds_available() -> bool:
@@ -277,6 +342,7 @@ def run(
     do_placebo: bool,
     do_loso: bool,
     do_sens: bool,
+    do_power: bool = True,
     use_odds: bool | None = None,
 ):
     s = get_settings()
@@ -321,6 +387,23 @@ def run(
         print(
             f"Spearman corr of A-vs-B referee lean rankings: {df.attrs['spearman_A_vs_B_lean']:.3f}"
         )
+
+    if do_power:
+        df = power_check(quick)
+        df.to_csv(s.paths.robustness_dir / "power.csv", index=False)
+        print("\n=== Statistical power: minimum-detectable-effect + injection-recovery ===")
+        print(df.to_string(index=False))
+        inj = df[df["test"] == "injection"]
+        detected = inj[inj["detected"] == True]  # noqa: E712
+        smallest = int(detected["shift_fouls"].min()) if len(detected) else None
+        if smallest is None:
+            print("No injected lean was detected at the tested sizes -> design is severely underpowered.")
+        else:
+            print(
+                f"Smallest detected injection: +{smallest} fouls/game (= +{2 * smallest} foul-margin). "
+                f"Leans smaller than this are UNDETECTABLE -> the null means 'no DETECTABLE swing', "
+                f"not 'no swing'."
+            )
     print(f"\n[robustness] outputs in {s.paths.robustness_dir}")
 
 
@@ -329,7 +412,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quick", action="store_true", help="fast sampling + 3 placebos")
     parser.add_argument("--full", action="store_true", help="full sampling + 20 placebos")
     parser.add_argument("--placebos", type=int, default=None, help="override placebo count")
-    parser.add_argument("--only", choices=["loo", "placebo", "loso", "sensitivity"], default=None)
+    parser.add_argument(
+        "--only", choices=["loo", "placebo", "loso", "sensitivity", "power"], default=None
+    )
     parser.add_argument(
         "--no-odds", action="store_true", help="force the no-odds model (auto-detected otherwise)"
     )
@@ -345,6 +430,7 @@ def main(argv: list[str] | None = None) -> int:
         do_placebo=sel in (None, "placebo"),
         do_loso=sel in (None, "loso"),
         do_sens=sel in (None, "sensitivity"),
+        do_power=sel in (None, "power"),
         use_odds=False if ns.no_odds else None,
     )
     return 0

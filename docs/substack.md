@@ -121,6 +121,15 @@ so plainly.
 "lean" variation **[collapses toward / stays above]** the real estimate. Real exceeds **[insert
 %]** of placebos.
 
+**Can I even detect a swing? (the part most analyses skip.)** A null is only meaningful if the
+method has the power to find a real effect. So I *inject* a known lean into the most-sampled
+official's games and check whether the model recovers it. In my run, a clearly swing-relevant
+**+1 foul/game** lean injected into a referee with ~100 games was **[insert: detected / not
+detected]**; only a **+2 foul/game** lean was reliably recovered. That means the honest
+headline is **"no *detectable* referee swing,"** not "referees don't matter." With a few
+hundred playoff games and ~20 per official, this design would miss a modest-but-real effect —
+and saying so is the difference between an honest null and an overclaim.
+
 ## What would count as evidence
 
 Because the bar for any claim about officiating should be high, here's what would move me:
@@ -139,11 +148,15 @@ evidence. It's a hypothesis.
 
 ## Limitations
 
-The big one is selection bias: referees aren't assigned at random, so a referee "effect" can be
-a stand-in for the kinds of games that referee tends to work. Betting lines help me control for
-*who is playing and how good they are*, but they do not make assignment random. The models are
-**associational**, full stop — foul margins also reflect team style, pace, coaching, and
-deliberate late-game fouling. Playoff samples are small, so intervals are wide. And box-score
+There are two big ones. **First, power:** with a few hundred playoff games and ~20 per official,
+this design can miss a modest-but-real referee lean (my injection test only reliably recovers a
++2-foul/game effect). So a null here means "no *detectable* swing," not "no swing" — absence of
+evidence is not evidence of absence. **Second, selection bias:** referees aren't assigned at
+random, so a referee "effect" can be a stand-in for the kinds of games that referee tends to
+work. Betting lines help me control for *who is playing and how good they are*, but they do not
+make assignment random. The models are **associational**, full stop — foul margins also reflect
+team style, pace, coaching, and deliberate late-game fouling. Playoff samples are small, so
+intervals are wide. And box-score
 fouls are a blunt instrument compared to what a possession-level dataset could reveal.
 
 ## Why this matters

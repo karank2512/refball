@@ -76,6 +76,28 @@ chief", and does **not** duplicate the game three times as if officials were ind
 Each game contributes a row of `1/3` weights to a `[games × referees]` matrix, and the crew
 effect is the **average** of the assigned officials' effects.
 
+## Statistical power — *absence of evidence is not evidence of absence*
+
+This is the most important caveat, and it survived an adversarial self-audit. A null
+("no referee shows a detectable lean") only means something if the method *could* have
+detected a real effect. So we run an **injection-recovery** check: we add a *known*
+directional lean to the most-sampled referee's games and see whether the model recovers it.
+
+- A **+1 foul/game** home lean (a +2 home foul-margin per game — clearly swing-relevant,
+  ~0.9 points) injected into the most-observed official is **not** detected.
+- Only a **+2 foul/game** (+4 foul-margin) injection is detected.
+
+So with ~585 playoff games and a median of ~21 games per official, the design is
+**underpowered** to resolve modest referee leans. The honest claim is therefore **"no
+*detectable* referee-associated swing,"** not "referees provably don't affect games."
+
+What the audit *did* rule out: the null is **not** an artifact of tight priors (widening
+the lean prior 75× leaves the posterior unchanged), **not** an over-control artifact (the
+free-throw-*inclusive* total foul-margin → points association is also ≈ 0), and **not** a
+bug (sign, multi-membership, placebo, and mediation all verified). It also isn't a fluke:
+foul margin is nearly uncorrelated with the final margin (r ≈ 0.02), plausibly because
+game state — intentional fouling when trailing, garbage time — decouples the two.
+
 ## Why this is not proof of bias
 
 - **Assignment is not random.** Playoff crews are chosen by the league; better/veteran crews

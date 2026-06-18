@@ -203,18 +203,35 @@ referee models (and logged) — the pipeline degrades gracefully.
   differential ~ StudentT on foul/FT margins + line + total. **Mediation** composes the
   per-referee foul-margin association with the foul→points coefficient over the full posterior.
 - **Robustness:** PSIS-LOO (no-ref / ref-volume / ref-volume+lean), within-season permutation
-  **placebo**, **leave-one-season-out**, and **with/without-odds** sensitivity.
+  **placebo**, **leave-one-season-out**, **with/without-odds** sensitivity, prior-sensitivity,
+  and an **injection-recovery power check** (`robustness --only power`).
+
+## Findings & honest framing (real 2017–2023 playoffs, no odds)
+
+The current real-data result is a **null — but a carefully-qualified one**, hardened by an
+adversarial self-audit (see `docs/` and the Diagnostics page):
+
+- **No *detectable* referee-associated foul lean.** 0 of 58 officials have a 94% interval
+  excluding zero, and the lean variance is indistinguishable from shuffled-crew placebos.
+- **This is not an artifact.** It survives a 75× wider prior (posterior unchanged), it is
+  **not** over-control (the free-throw-*inclusive* total foul-margin → points association is
+  also ≈ 0: `+0.03`, HDI `[−0.22, +0.28]`), and it is **not** a bug (sign / multi-membership /
+  placebo / mediation all verified).
+- **But the design is underpowered.** Injection-recovery shows a clearly swing-relevant
+  **+1 foul/game** lean injected into the most-sampled official is **not** detected (only +2
+  is). So the honest claim is **"no *detectable* referee swing,"** *not* "referees provably
+  don't affect outcomes." **Absence of evidence ≠ evidence of absence.**
 
 ## Main limitations
 
+- **Underpowered for small effects.** ~585 games, ~21 games/official → a modest but real lean
+  would be missed. The null is "no detectable swing," reported with that caveat front and center.
 - **Assignment is not random** → selection bias / endogeneity. Lines help control for team
   strength but do not fix it.
 - **Associational, not causal.** Foul margins also reflect team style, pace, coaching, and
-  intentional fouling.
-- **Small playoff samples** → wide intervals. Many officials × wide intervals means some land
-  at the extremes by chance.
-- **Box-score fouls** are coarse; call-level/play-by-play data would measure the whistle
-  directly.
+  intentional fouling — fouls are nearly uncorrelated with the final margin (r ≈ 0.02).
+- **Box-score fouls** are coarse; call-level/play-by-play (foul *types*) would measure the
+  whistle directly and add power.
 
 See the in-app **Methodology & Limitations** page for the full treatment, including
 *what would count as better evidence*.

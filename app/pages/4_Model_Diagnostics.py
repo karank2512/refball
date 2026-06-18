@@ -76,6 +76,29 @@ if len(placebo):
 else:
     st.info("Run the placebo check to populate this.")
 
+st.markdown("### Statistical power — can we even detect a swing?")
+power = load_robustness("power")
+if len(power):
+    st.dataframe(power, width="stretch")
+    inj = power[power["test"] == "injection"]
+    detected = inj[inj["detected"] == True]  # noqa: E712
+    smallest = int(detected["shift_fouls"].min()) if len(detected) else None
+    st.warning(
+        "**A null is only informative if the method has power.** We inject a *known* referee "
+        "lean into the most-sampled official's games and check whether the model recovers it. "
+        + (
+            f"The smallest injected lean we reliably detect is **+{smallest} fouls/game** "
+            f"(a +{2 * smallest} home foul-margin/game effect). A clearly swing-relevant "
+            "**+1 foul/game** lean is **not** detected — so the result is *no **detectable** "
+            "referee swing*, **not** proof that referees don't matter. Absence of evidence is "
+            "not evidence of absence."
+            if smallest
+            else "No injected lean was detected — the design is severely underpowered."
+        )
+    )
+else:
+    st.info("Run `python -m refball.models.robustness --only power` to populate this.")
+
 c1, c2 = st.columns(2)
 with c1:
     st.markdown("### Leave-one-season-out")
