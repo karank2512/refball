@@ -49,11 +49,15 @@ def _parse_date(val: str) -> date:
 
 
 # --- 1. Team game logs --------------------------------------------------------
-def _season_team_log(start_year: int, force_refresh: bool):
+def _type_tag(season_type: str) -> str:
+    return "reg" if season_type.lower().startswith("regular") else "po"
+
+
+def _season_team_log(start_year: int, force_refresh: bool, season_type: str = "Playoffs"):
     import pandas as pd
 
     ss = season_str(start_year)
-    path = raw_path("nba", f"team_gamelog_{ss}.parquet")
+    path = raw_path("nba", f"team_gamelog_{_type_tag(season_type)}_{ss}.parquet")
 
     def _build():
         from nba_api.stats.endpoints import leaguegamelog
@@ -64,30 +68,30 @@ def _season_team_log(start_year: int, force_refresh: bool):
             polite_sleep()
             lg = leaguegamelog.LeagueGameLog(
                 season=ss,
-                season_type_all_star="Playoffs",
+                season_type_all_star=season_type,
                 player_or_team_abbreviation="T",
                 timeout=int(s.request_timeout_s),
             )
             return lg.get_data_frames()[0]
 
-        df = with_retries(_call, what=f"LeagueGameLog {ss}")
+        df = with_retries(_call, what=f"LeagueGameLog {ss} {season_type}")
         df["__start_year"] = start_year
         return df
 
     df = cached_parquet(path, _build, force_refresh=force_refresh)
     if not isinstance(df, pd.DataFrame) or df.empty:
-        logger.warning("No team game log rows for %s", ss)
+        logger.warning("No team game log rows for %s (%s)", ss, season_type)
     return df
 
 
-def pull_team_logs(seasons: list[int], force_refresh: bool = False):
+def pull_team_logs(seasons: list[int], force_refresh: bool = False, season_type: str = "Playoffs"):
     import pandas as pd
 
-    frames = [_season_team_log(yr, force_refresh) for yr in seasons]
+    frames = [_season_team_log(yr, force_refresh, season_type) for yr in seasons]
     frames = [f for f in frames if f is not None and not f.empty]
     if not frames:
         raise RuntimeError(
-            "No playoff team logs pulled. Check nba_api connectivity, or use "
+            f"No {season_type} team logs pulled. Check nba_api connectivity, or use "
             "`python -m refball.data.synthetic` for demo mode."
         )
     return pd.concat(frames, ignore_index=True)
@@ -204,11 +208,14 @@ def pull_officials(game_ids: list[str], force_refresh: bool = False):
 
 
 # --- 3. Assemble --------------------------------------------------------------
-def assemble_games(seasons: list[int], force_refresh: bool = False):
-    """Build + cache the canonical games table to ``data/interim/games.parquet``."""
+def assemble_games(seasons: list[int], force_refresh: bool = False, season_type: str = "Playoffs"):
+    """Build + cache the canonical games table.
 
+    Playoffs -> ``data/interim/games.parquet`` (the default modeling input);
+    Regular Season -> ``data/interim/games_regular.parquet`` (kept separate).
+    """
     s = get_settings()
-    team_log = pull_team_logs(seasons, force_refresh)
+    team_log = pull_team_logs(seasons, force_refresh, season_type)
     games = pivot_to_games(team_log)
     officials = pull_officials(games["game_id"].tolist(), force_refresh)
     games = games.merge(officials, on="game_id", how="left")
@@ -219,25 +226,29 @@ def assemble_games(seasons: list[int], force_refresh: bool = False):
     games = games[GAME_COLUMNS]
 
     n_missing_off = int(games["official_1"].isna().sum())
-    logger.info("Assembled %d games; %d missing officials", len(games), n_missing_off)
+    logger.info("Assembled %d %s games; %d missing officials", len(games), season_type, n_missing_off)
 
     s.paths.ensure()
-    games.to_parquet(s.paths.games_interim, index=False)
+    out = s.paths.games_regular_interim if _type_tag(season_type) == "reg" else s.paths.games_interim
+    games.to_parquet(out, index=False)
     log_source(
         "nba_api",
-        "LeagueGameLog(Playoffs,T) + BoxScoreSummaryV2.officials",
+        f"LeagueGameLog({season_type},T) + BoxScoreSummaryV2.officials",
         season_start=seasons[0],
         season_end=seasons[-1],
         rows=len(games),
-        note=f"{n_missing_off} games missing officials",
+        note=f"{season_type}; {n_missing_off} games missing officials",
     )
-    return games
+    return games, out
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Pull NBA playoff games + officials (nba_api).")
+    parser = argparse.ArgumentParser(description="Pull NBA games + officials (nba_api).")
     parser.add_argument("--season-start", type=int, default=None)
     parser.add_argument("--season-end", type=int, default=None)
+    parser.add_argument(
+        "--season-type", default="Playoffs", choices=["Playoffs", "Regular Season"]
+    )
     parser.add_argument("--force-refresh", action="store_true")
     ns = parser.parse_args(argv)
 
@@ -247,9 +258,9 @@ def main(argv: list[str] | None = None) -> int:
         if ns.season_start and ns.season_end
         else s.seasons
     )
-    logger.info("Pulling seasons %s (force_refresh=%s)", seasons, ns.force_refresh)
-    games = assemble_games(seasons, force_refresh=ns.force_refresh)
-    print(f"[pull] assembled {len(games)} games -> {s.paths.games_interim}")
+    logger.info("Pulling %s seasons %s (force_refresh=%s)", ns.season_type, seasons, ns.force_refresh)
+    games, out = assemble_games(seasons, force_refresh=ns.force_refresh, season_type=ns.season_type)
+    print(f"[pull] assembled {len(games)} {ns.season_type} games -> {out}")
     return 0
 
 

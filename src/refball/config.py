@@ -41,6 +41,11 @@ class Paths:
         return self.interim / "games.parquet"
 
     @property
+    def games_regular_interim(self) -> Path:
+        """Regular-season assembled games (kept separate from the playoff table)."""
+        return self.interim / "games_regular.parquet"
+
+    @property
     def odds_synthetic(self) -> Path:
         return self.external / "odds_synthetic.csv"
 
