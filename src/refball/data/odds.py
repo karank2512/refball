@@ -99,10 +99,69 @@ def load_odds_csv(path: str | Path) -> object:
     return out[ODDS_COLUMNS]
 
 
+# Public 10-year games+odds archive (MIT-licensed scrape of sportsbookreview); has
+# home_close_spread + close_over_under per game. Covers seasons ~2011-2021.
+ODDS_ARCHIVE_URL = (
+    "https://raw.githubusercontent.com/flancast90/sportsbookreview-scraper/main/data/nba_archive_10Y.json"
+)
+
+
+def download_odds_archive(force_refresh: bool = False) -> Path:
+    """Cache the public MIT-licensed NBA closing-odds archive locally."""
+    path = get_settings().paths.external / "nba_odds_archive.json"
+    if path.exists() and not force_refresh:
+        return path
+    import requests
+
+    logger.info("Downloading NBA odds archive: %s", ODDS_ARCHIVE_URL)
+    r = requests.get(ODDS_ARCHIVE_URL, timeout=60, headers={"User-Agent": "refball-research"})
+    r.raise_for_status()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(r.content)
+    return path
+
+
+def load_odds_archive_json(path: str | Path) -> object:
+    """Parse the sportsbookreview 10Y archive JSON into the canonical odds contract.
+
+    Uses the **closing** line (``home_close_spread`` is already home-perspective: negative =
+    home favored) and ``close_over_under`` as the total.
+    """
+    import json
+
+    import pandas as pd
+
+    recs = json.loads(Path(path).read_text(encoding="utf-8"))
+    rows = []
+    for r in recs:
+        try:
+            gd = pd.to_datetime(str(int(float(r["date"]))), format="%Y%m%d", errors="coerce")
+        except (ValueError, TypeError, KeyError):
+            continue
+        rows.append(
+            {
+                "game_date": gd.date() if pd.notna(gd) else None,
+                "home_tricode": normalize_team(r.get("home_team")),
+                "away_tricode": normalize_team(r.get("away_team")),
+                "spread_home": pd.to_numeric(r.get("home_close_spread"), errors="coerce"),
+                "total_market": pd.to_numeric(r.get("close_over_under"), errors="coerce"),
+                "odds_source": "sportsbookreview_archive",
+            }
+        )
+    out = pd.DataFrame(rows)
+    n0 = len(out)
+    out = out.dropna(subset=["game_date", "home_tricode", "away_tricode", "spread_home", "total_market"])
+    out = out.drop_duplicates(subset=["game_date", "home_tricode", "away_tricode"])
+    logger.info("Odds archive: %d usable rows (from %d records)", len(out), n0)
+    validate_columns(out, ODDS_COLUMNS, "odds archive")
+    return out[ODDS_COLUMNS]
+
+
 def load_odds(path: str | Path | None = None) -> object:
     """Resolve an odds source. Returns an empty (but correctly-typed) frame if none found.
 
-    Precedence: explicit ``path`` > synthetic demo file > empty.
+    Precedence: explicit ``path`` > synthetic demo file > empty. ``.json`` paths are parsed as
+    the sportsbookreview archive; ``.csv`` via the alias-mapping loader.
     Callers decide whether to run the with-odds or no-odds model based on row count.
     """
     import pandas as pd
@@ -110,7 +169,7 @@ def load_odds(path: str | Path | None = None) -> object:
     s = get_settings()
     if path is not None:
         logger.info("Loading odds from explicit path: %s", path)
-        return load_odds_csv(path)
+        return load_odds_archive_json(path) if str(path).endswith(".json") else load_odds_csv(path)
     if s.paths.odds_synthetic.exists():
         logger.info("Loading synthetic demo odds: %s", s.paths.odds_synthetic)
         return load_odds_csv(s.paths.odds_synthetic)
