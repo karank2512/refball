@@ -34,3 +34,6 @@ data/processed/*.json
 data/processed/*.jsonl
 data/processed/robustness/
 !data/processed/.gitkeep
+
+# Claude Code tool configs (local)
+.claude/

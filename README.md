@@ -245,13 +245,19 @@ pipeline (or ship the `data/`+`models/` artifacts) works:
 
 ## Screenshots
 
-_Add screenshots of the Home, Referee Effects (caterpillars), and Diagnostics pages here._
+> Run the app locally (`streamlit run app/Home.py`), then save PNGs to `docs/screenshots/`
+> with the filenames below — the embeds light up automatically once the files exist.
+> Suggested pages (Streamlit URLs): Home `/`, Referee Effects `/Referee_Effects`,
+> Diagnostics `/Model_Diagnostics`.
 
-```text
-docs/screenshots/home.png
-docs/screenshots/referee_effects.png
-docs/screenshots/diagnostics.png
-```
+### Home
+![Ref Ball home page](docs/screenshots/home.png)
+
+### Referee effects — caterpillar plots with 94% credible intervals
+![Referee effects page](docs/screenshots/referee_effects.png)
+
+### Model diagnostics — convergence, PPC, LOO, placebo
+![Model diagnostics page](docs/screenshots/diagnostics.png)
 
 ## License
 
