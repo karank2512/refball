@@ -108,6 +108,33 @@ The thing the data *does* show is small and old news: home teams are whistled sl
 (*Scorecasting* attributes ~three-quarters of home-court advantage to officiating tendencies).
 It is a leaguewide, well-documented home tilt — not a specific crew tipping specific games.
 
+## I tried to prove the opposite
+
+A null is easy to *want*, so I spent a full pass as the prosecution: assume there's no swing, and
+try as hard as a motivated analyst could to manufacture evidence that there is one. You can get
+scary numbers. Here are four I built — and why each is a magic trick.
+
+**"Referee Josh Tiven favors home — 73% of his clutch errors went the home team's way, p=0.015."**
+True, if you pick the most extreme of 32 referees and quote it one-sided. Corrected for having
+looked at 32, the p-value is **0.46**, and a coin-flip simulation produces *someone* this extreme
+**24% of the time**. It's the luckiest of 32 coin-flippers, nothing more.
+
+**"Refs protect the favorite in close games — a 1.7-foul tilt, p=0.002."** That's the best of 18
+post-hoc slices. Home *underdogs* in close games get the same tilt — so it's home court, not
+favoritism — and fouls barely move the scoreboard anyway (the foul-to-points correlation is 0.02).
+
+**"One referee tops every leaderboard — foul margin, points, *and* the league's own missed-call
+audit. Convergence!"** With 58 referees, someone tops each noisy list by construction. The killer
+check: that referee's playoff "lean" **flips sign** in his 427-game regular-season record. Across
+all referees, playoff lean and regular-season lean correlate at **0.01** — a playoff lean tells
+you essentially nothing about the referee.
+
+The **only** number that survives is the leaguewide home tilt (+0.5 free-throw attempts a game) —
+and a placebo that shuffles referee labels shows it attaches to *home court*, not to any
+referee's *identity* (p=0.22). Every "smoking gun" is multiple comparisons, a cherry-picked
+subgroup, or regression to the mean in a costume. Trying my hardest to fake a positive result,
+and watching all of it dissolve, is the strongest confirmation of the null I could ask for.
+
 ## What would count as evidence
 
 I held a high bar, and I'll keep holding it. What would move me: a referee lean that **survives**
