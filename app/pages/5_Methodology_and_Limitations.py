@@ -146,6 +146,15 @@ rotate); a **regular-season power test** (~290 games/referee — the high-power 
 playoffs can't do, where playoff "leans" turn out to be uncorrelated noise); **play-by-play**
 foul-type + game-state cleaning (discretionary fouls in competitive states); and a real
 **closing-line market control**. All four converge on the same null.
+
+**Devil's advocate.** We also tried the opposite — to *manufacture* a swing. By mining the most
+extreme of 58 referees, slicing the data 18 ways, and naming a villain, you can produce
+scary-looking numbers (a referee "73% home-favoring, p=0.015"; a subgroup "−1.7 foul tilt,
+p=0.002"). Every one dies under a standard correction (Bonferroni, FDR, a label-permutation
+placebo, and regression to the mean — the leaderboard-topping referee's lean *flips sign* in
+their high-power regular-season record). The only survivor is a small, **crew-invariant**
+leaguewide home tilt — home-court advantage, not a referee swing. Reproduce it with
+`python -m refball.models.devils_advocate` (write-up in `docs/devils_advocate.md`).
 """
 )
 

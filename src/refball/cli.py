@@ -25,6 +25,7 @@ _COMMANDS = {
     "pbp": ("refball.data.pbp", "main"),
     "pbp-clean": ("refball.models.pbp_clean", "main"),
     "regular-season": ("refball.models.regular_season", "main"),
+    "devils-advocate": ("refball.models.devils_advocate", "main"),
 }
 
 

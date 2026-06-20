@@ -259,6 +259,13 @@ To attack the power and identification gaps, four more public-data angles — an
   even after removing garbage-time/intentional fouls.
 - **Closing-line market control.** Adding the real closing spread/total (332 games) barely
   moves the foul→points coefficient and leaves referee rankings stable (Spearman ≈ 0.76).
+- **Devil's advocate (we tried to prove the opposite).** Mining the most extreme of 58 refs,
+  slicing 18 ways, and naming a villain produces scary numbers (a ref "73% home-favoring,
+  p=0.015"; a subgroup "−1.7 foul tilt, p=0.002") — but every one dies under Bonferroni/FDR, a
+  label-permutation placebo (referee identity adds nothing, p=0.22), and regression to the mean
+  (the leaderboard-topper's lean *flips sign* in the high-power regular season; playoff-vs-regular
+  Spearman 0.01). Only a small **crew-invariant** home tilt survives. See
+  [`docs/devils_advocate.md`](docs/devils_advocate.md) · `python -m refball.models.devils_advocate`.
 
 ## Main limitations
 
