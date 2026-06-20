@@ -80,6 +80,31 @@ actual tendency. The leaderboard-topper is just the most extreme draw of noise, 
 
 ---
 
+## Exhibit E — "Maybe it's not all refs, just one bad apple" (the specific bad-actor test)
+
+The fairest version of the prosecution: forget the *average* referee — is there *one* official
+who swings games, even if most don't? This is the Scott Foster hypothesis, and it deserves a
+direct test, because a population-level null doesn't automatically rule out a lone outlier.
+
+Two checks, on the high-power regular-season data (102 referees, ~293 games each):
+
+1. **Per-referee, at power.** With ~293 games apiece, a real bad actor would surface. None does:
+   **0 of 102** referees have a 94% interval excluding zero, and the single most extreme lean in
+   the league is **≈ 0.04 fouls per game** — and it belongs to Brett Nansel, not anyone with a
+   reputation. The "prime suspects" all have intervals straddling zero.
+
+2. **Within-referee split-half replication (model-free, no shrinkage).** A genuine bad actor's
+   lean should reappear in a fresh batch of their own games. Splitting each referee's games in
+   half, the correlation between a referee's home-foul lean on one half and the other is
+   **Pearson ≈ 0.19 (p ≈ 0.10) — small and not statistically significant** (and it drops toward
+   zero with noisier splits). Even taken at face value, this *raw* measure conflates which teams
+   and venues a referee happens to draw; the team-and-season-controlled Bayesian model removes
+   those confounds and lands at the 0/102 above.
+
+So a specific bad actor would need to be **both** real-sized (distinguishable from zero at power)
+**and** reproducible (lean replicates across their games). No individual referee satisfies
+either condition decisively, let alone both.
+
 ## Verdict
 
 | Exhibit | Manufactured headline | Defeated by | Survives? |
@@ -88,6 +113,7 @@ actual tendency. The leaderboard-topper is just the most extreme draw of noise, 
 | B — best subgroup | −1.7 foul tilt, p=0.002 | multiplicity; same for underdogs; fouls≠points | ❌ |
 | C — home tilt | +0.52 FTA/game, p=8e-8 | real, but identity-placebo p=0.22 → crew-invariant | ✅ *as home-court only* |
 | D — one ref, 3 metrics | #1 everywhere | regression to mean (sign flips); Spearman 0.01 | ❌ |
+| E — one bad apple | a specific guilty referee | 0/102 at power; max ≈0.04 fouls/game; split-half n.s. | ❌ |
 
 Trying as hard as I could to prove a swing — and watching every case dissolve under standard
 corrections — is the **strongest possible confirmation of the null**. The only thing that

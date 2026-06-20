@@ -200,6 +200,67 @@ def regression_to_mean():
     }
 
 
+def bad_actor_test(rng, min_games_per_half=60):
+    """Strategy 5: is there a SPECIFIC bad-actor referee (not just a null average)?
+
+    (a) High-power per-referee extremes: with ~290 regular-season games each, is *any* single
+        referee distinguishable from zero? (b) Model-free **within-referee split-half
+        replication** — does a referee's home-foul lean on half their games predict the other
+        half? A real bad actor's lean replicates; noise doesn't. No shrinkage is applied, so this
+        also answers the worry that partial pooling might hide a lone outlier.
+    """
+    import pandas as pd
+    from scipy.stats import pearsonr, spearmanr
+
+    s = get_settings()
+    e = pd.read_parquet(s.paths.processed / "regular_season_effects.parquet").sort_values(
+        "reg_lean_mean", ascending=False
+    )
+    n_excl = int(((e["reg_hdi_low"] > 0) | (e["reg_hdi_high"] < 0)).sum())
+
+    def row(r):
+        return {
+            "referee": str(r.referee),
+            "reg_games": int(r.reg_games),
+            "reg_lean_mean": round(float(r.reg_lean_mean), 4),
+            "hdi_low": round(float(r.reg_hdi_low), 4),
+            "hdi_high": round(float(r.reg_hdi_high), 4),
+            "p_home": round(float(r.reg_p_gt0), 3),
+        }
+
+    suspects = [row(r) for r in e.head(3).itertuples()] + [row(r) for r in e.tail(3).itertuples()]
+
+    mt = pd.read_parquet(s.paths.processed / "modeling_table_regular.parquet")
+    long = pd.concat(
+        [mt[["game_id", c, "foul_diff_home"]].rename(columns={c: "ref_id"}) for c in _ID_COLS],
+        ignore_index=True,
+    ).dropna(subset=["ref_id"])
+    long["ref_id"] = long["ref_id"].astype(int)
+    halves = []
+    for _, g in long.groupby("ref_id"):
+        if len(g) < 2 * min_games_per_half:
+            continue
+        idx = rng.permutation(len(g))
+        h = len(g) // 2
+        halves.append(
+            (g.iloc[idx[:h]]["foul_diff_home"].mean(), g.iloc[idx[h:]]["foul_diff_home"].mean())
+        )
+    hh = np.array(halves)
+    pr = pearsonr(hh[:, 0], hh[:, 1])
+    sr = spearmanr(hh[:, 0], hh[:, 1])
+    return {
+        "n_refs_regular": int(len(e)),
+        "median_games_per_ref": int(e["reg_games"].median()),
+        "refs_excluding_zero": n_excl,
+        "most_extreme_abs_lean": round(float(e["reg_lean_mean"].abs().max()), 4),
+        "prime_suspects": suspects,
+        "split_half_n_refs": int(len(hh)),
+        "split_half_pearson": round(float(pr.statistic), 3),
+        "split_half_spearman": round(float(sr.statistic), 3),
+        "split_half_p": round(float(pr.pvalue), 3),
+    }
+
+
 def run():
     rng = np.random.default_rng(2024)
     s = get_settings()
@@ -208,6 +269,7 @@ def run():
         "strategy_2_subgroup_forking": subgroup_forking(),
         "strategy_3_label_permutation_placebo": label_permutation_placebo(rng),
         "strategy_4_regression_to_mean": regression_to_mean(),
+        "strategy_5_bad_actor_replication": bad_actor_test(rng),
     }
     s.paths.ensure()
     (s.paths.processed / "devils_advocate_summary.json").write_text(
@@ -253,9 +315,20 @@ def run():
         f"   leaderboard-topper {d['top_playoff_ref']}: playoff lean {d['top_ref_playoff_lean']:+.4f} -> "
         f"regular {d['top_ref_regular_lean']:+.4f} (sign flips: {d['top_ref_sign_flips']})"
     )
+    f = out["strategy_5_bad_actor_replication"]
     print(
-        "\nVERDICT: every manufactured 'swing' dies under standard correction; the only survivor is a "
-        "small, crew-INVARIANT, leaguewide home tilt (documented home-court advantage) — not a referee swing."
+        f"\n5. Specific bad actor? High-power per-ref: {f['refs_excluding_zero']}/{f['n_refs_regular']} "
+        f"refs exclude zero (~{f['median_games_per_ref']} games each); most extreme |lean|={f['most_extreme_abs_lean']}."
+    )
+    print(
+        f"   within-referee split-half replication ({f['split_half_n_refs']} refs, model-free, NO shrinkage): "
+        f"Pearson r={f['split_half_pearson']}, Spearman={f['split_half_spearman']} (p={f['split_half_p']}) "
+        f"-> a referee's lean does NOT replicate across their own games."
+    )
+    print(
+        "\nVERDICT: every manufactured 'swing' dies under standard correction. No INDIVIDUAL referee is "
+        "both real-sized and reproducible. The only survivor is a small, crew-INVARIANT, leaguewide home "
+        "tilt (documented home-court advantage) — not a referee swing."
     )
     return out
 

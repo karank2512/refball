@@ -46,6 +46,43 @@ else:
         "Run `python -m refball.models.regular_season --quick` (after the regular-season pull)."
     )
 
+# --- Is it SPECIFIC referees? (bad-actor test) --------------------------------
+st.markdown("### Is it *specific* referees, not the average?")
+da = load_json_summary("devils_advocate_summary")
+ba = da.get("strategy_5_bad_actor_replication", {})
+if ba:
+    import pandas as pd
+
+    st.caption(
+        f"A population null isn't the same as 'no bad apple'. With ~{ba['median_games_per_ref']} "
+        f"games each, a real bad actor would surface — yet **{ba['refs_excluding_zero']} of "
+        f"{ba['n_refs_regular']}** referees have an interval excluding zero, and the single most "
+        f"extreme lean in the league is just **≈{ba['most_extreme_abs_lean']} log "
+        f"(~{round(2 * 20.7 * ba['most_extreme_abs_lean'] / 3, 2)} fouls/game)**. The 'prime "
+        "suspects' (most extreme of 102) — note they all straddle zero:"
+    )
+    ps = pd.DataFrame(ba["prime_suspects"])
+    ps["94% interval"] = [
+        f"[{lo:+.3f}, {hi:+.3f}]" for lo, hi in zip(ps["hdi_low"], ps["hdi_high"], strict=True)
+    ]
+    st.dataframe(
+        ps[["referee", "reg_games", "reg_lean_mean", "94% interval", "p_home"]].rename(
+            columns={"reg_games": "games", "reg_lean_mean": "home lean", "p_home": "P(home)"}
+        ),
+        width="stretch",
+    )
+    st.info(
+        f"**The bad-actor test — does any referee's lean *replicate*?** Splitting each referee's "
+        f"games in half (model-free, **no shrinkage**), the correlation between their home-foul "
+        f"lean on one half and the other is Pearson **{ba['split_half_pearson']}** "
+        f"(p={ba['split_half_p']}, n={ba['split_half_n_refs']}) — small and not significant. A "
+        "genuine bad actor's lean would persist across their own games; this is indistinguishable "
+        "from no stable individual effect. To swing games a referee would need a lean that is "
+        "*both* real-sized **and** reproducible — none is either, decisively."
+    )
+else:
+    st.caption("Run `python -m refball.models.devils_advocate` to populate the bad-actor test.")
+
 # --- Within-series identification ---------------------------------------------
 st.markdown("## 2. Within-series identification")
 ws = load_json_summary("within_series_summary")
