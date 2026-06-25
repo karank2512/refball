@@ -1,22 +1,17 @@
 # Ref Ball? 🏀
 
-### Quantifying NBA Playoff Referee Impact Through Fouls and Point Differential
+### Quantifying Referee Impact Through Fouls and Point Differential on NBA Playoffs
 **Refs → fouls → point differential**
 
 An open, reproducible, **observational** sports-analytics project that asks a popular fan
 question honestly:
 
-> *Are certain referees or crews associated with NBA playoff foul patterns in ways that
+> *Are certain referees associated with NBA playoff foul patterns in ways that
 > appear to "swing" outcomes?*
-
-The Scott Foster narrative is the cultural hook. The answer this project gives is statistical,
-uncertainty-aware, and deliberately un-sensational.
 
 > [!IMPORTANT]
 > **This project makes no claim that any referee, crew, team, or league fixed, rigged,
-> swung, or manipulated a game, or acted with intent.** Referee assignments are **not**
-> random; playoff assignments are **endogenous**. Every estimate here is a *screening metric
-> reported with uncertainty*, not proof. A statistical outlier is not evidence of misconduct.
+> swung, or manipulated a game, or acted with intent.**
 
 ---
 
@@ -24,8 +19,7 @@ uncertainty-aware, and deliberately un-sensational.
 
 For each playoff game we model, with full Bayesian uncertainty:
 
-1. **Total foul volume** — is an official associated with more/fewer total fouls (after pace,
-   teams, season, and the betting market)?
+1. **Total foul volume** — is an official associated with more/fewer total fouls?
 2. **Directional foul lean** — is an official associated with a `home_pf − away_pf` margin?
    (Positive lean = the home team is *whistled more*, **not** *favored*.)
 3. **Free-throw margin** and **foul margin → point differential** — how does the whistle show
@@ -296,32 +290,6 @@ See the in-app **Methodology & Limitations** page for the full treatment, includ
 pytest -q
 ruff check src app tests && ruff format --check src app tests
 ```
-
-## Deployment
-
-The Streamlit app reads local parquet/CSV/NetCDF artifacts, so any host that can run the
-pipeline (or ship the `data/`+`models/` artifacts) works:
-
-- **Streamlit Community Cloud** — point it at `app/Home.py`; commit the demo artifacts or run
-  the demo pipeline in a build step.
-- **Hugging Face Spaces** (Streamlit SDK) or **Render** — same idea; `requirements.txt` +
-  `streamlit run app/Home.py`.
-
-## Screenshots
-
-> Run the app locally (`streamlit run app/Home.py`), then save PNGs to `docs/screenshots/`
-> with the filenames below — the embeds light up automatically once the files exist.
-> Suggested pages (Streamlit URLs): Home `/`, Referee Effects `/Referee_Effects`,
-> Diagnostics `/Model_Diagnostics`.
-
-### Home
-![Ref Ball home page](docs/screenshots/home.png)
-
-### Referee effects — caterpillar plots with 94% credible intervals
-![Referee effects page](docs/screenshots/referee_effects.png)
-
-### Model diagnostics — convergence, PPC, LOO, placebo
-![Model diagnostics page](docs/screenshots/diagnostics.png)
 
 ## License
 
